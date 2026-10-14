@@ -47,5 +47,6 @@ Wtyczka ma wbudowane testy w `__init__.py`. Uruchamia się je przez `calibre-deb
    Najpierw wykonują się szybkie testy jednostkowe funkcji pomocniczych (`HelperTests`, bez sieci), potem testy integracyjne `test_identify_plugin`, które łączą się z lubimyczytac.pl i sprawdzają konkretne książki z listy `lctests`.
 
 4. Wygodne przekierowanie logów do plików: `calibre-debug -e __init__.py 2>lclog2.txt >lclog1.txt`. Szczegółowy raport parsowania włączysz zmienną `LUBIMYCZYTAC_DEBUG=1`.
+5. Zmiany w dopasowywaniu tytułów i autorów sprawdź też bez calibre: `python3 tests/rare_cases.py run tests/recorded.json` odtwarza wyszukiwanie na 39 nagranych przypadkach i kończy się kodem błędu, gdy wynik odbiega od oczekiwanego (opis w `tests/README.md`).
 
 Poprawiając wyszukiwanie dla konkretnej książki, dopisz ją do `lctests` (tytuł, autor, oczekiwany identyfikator LC). Testy integracyjne zależą od żywego serwisu, więc pojedyncze niepowodzenie warto najpierw sprawdzić ręcznie w przeglądarce, zanim uznasz je za błąd wtyczki.

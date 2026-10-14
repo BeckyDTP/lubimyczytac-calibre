@@ -2,6 +2,16 @@
 
 Wpisy są po angielsku, bo te same notatki publikujemy w wątku wtyczki na forum MobileRead. Najnowsza wersja na górze.
 
+## Wersja 2.4.1 – 15 Oct 2026
+*Wydanie przygotowane przez Becky.*
+- Fixed: An exact title match now takes precedence over a partial one regardless of the order on the LubimyCzytac results page. 'Cała prawda o planecie Ksi' no longer resolves to the collection 'Cała prawda o planecie Ksi. Drugie spojrzenie na planetę Ksi', which LubimyCzytac lists first.
+- Changed: Collected editions (titles listing several works separated by semicolons, or 'KSIĄŻKI WYBRANE: ...') that merely contain the searched title are treated as weak candidates instead of strong matches, so they no longer end the search with 'Fast matching'.
+- Changed: Results matching neither the title nor the author are no longer returned as a last resort. When LubimyCzytac does not know the title at all, the plugin reports no results instead of four random books (and skips four page downloads).
+- Fixed: Leading zeros in numbers no longer break title matching ('Moje szczęśliwe małżeństwo #04' in calibre vs '#4' on LubimyCzytac).
+- Fixed: A dot inside an abbreviation or initials ('cz.1', 'J.R.R.', 'Philip K. Dick') is no longer treated as a subtitle separator; it used to produce pointless extra queries such as 'Hobb 1'.
+- Changed: With 'Fast matching' disabled, candidates are ordered: exact title, partial title, weak matches. Previously the last strong match found ended up first.
+- Added: Two search-based cases in the built-in tests (calibre-debug -e __init__.py): 'Cała prawda o planecie Ksi' and 'Moje szczęśliwe małżeństwo #04'.
+
 ## Wersja 2.4.0 – 14 Oct 2026
 *Wydanie przygotowane przez Becky.*
 - Added: The optional 'Prefer matching ISBN' setting (disabled by default). When enabled and calibre supplies an ISBN, the plugin looks for an exact ISBN match among the editions of the initially selected book and switches to that edition; otherwise the original result is kept. The check stops at the first exact match and is skipped when the initially selected edition already matches.

@@ -47,6 +47,13 @@ Po instalacji ustawienia są dostępne w sekcji wtyczek źródeł metadanych. W�
 
 Dostępne opcje i ich działanie mogą zmieniać się wraz z kolejnymi wersjami wtyczki.
 
+### Jak wskazać konkretne wydanie
+
+Wyszukiwarka LubimyCzytać zna tylko wydanie główne każdej książki, a calibre nie przekazuje wtyczce wydawcy. Dlatego przy kilku wydaniach tego samego tytułu wtyczka zwraca wydanie główne (zwykle najnowsze), a książki wydanej wcześniej pod innym tytułem po samym tytule nie znajdzie. Są dwa sposoby, by dostać dokładnie to wydanie, które masz na półce:
+
+- wpisz w calibre ISBN tego wydania i włącz opcję **Prefer matching ISBN** – wtyczka przejrzy listę wydań znalezionej książki i wybierze to z pasującym ISBN (o ile LubimyCzytać zna ten numer);
+- wpisz identyfikator `lubimyczytac:<ID>` w polu identyfikatorów książki (ID to liczba z adresu strony wydania, np. `lubimyczytac:74063` dla `lubimyczytac.pl/ksiazka/74063/krol-pozwow`) i pobierz metadane ponownie – wtyczka pominie wyszukiwarkę i pobierze wskazaną stronę.
+
 ## Zgłaszanie błędów i propozycji
 
 Zgłoszenia przyjmujemy po polsku w sekcji **Issues** repozytorium.
@@ -133,6 +140,7 @@ Projekt jest udostępniany na warunkach GNU General Public License, wersja 3. Sz
 - `CHANGELOG.md` – historia zmian (po angielsku, bo te same notatki trafiają na forum MobileRead);
 - `changelog.txt` – ta sama historia w formacie BBCode, do wklejenia w wątku na MobileRead;
 - `ideas.md` – pomysły na kolejne wersje;
+- `tests/` – testy wyszukiwania na nagranych odpowiedziach LubimyCzytać, bez calibre i bez sieci (`python3 tests/rare_cases.py run tests/recorded.json`);
 - `build.py` – budowanie paczki instalacyjnej do `dist/` (katalog ignorowany przez git);
 - `CONTRIBUTING.md` – zasady zgłaszania błędów i zmian w kodzie;
 - `.github/ISSUE_TEMPLATE/` – formularze zgłoszeń;

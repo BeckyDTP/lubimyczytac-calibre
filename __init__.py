@@ -31,7 +31,7 @@ __docformat__ = 'restructuredtext en'
 
 # Numer wersji wtyczki (krotka wymagana przez calibre). Zmieniamy go tylko tutaj –
 # tekstowa postać (PLUGIN_VERSION w klasie LubimyCzytac) jest wyliczana z tej krotki.
-PLUGINVER = (2, 4, 0)
+PLUGINVER = (2, 4, 1)
 
 import time, re
 
@@ -694,16 +694,22 @@ class LubimyCzytac(Source):
         i część po nim. Polscy wydawcy zapisują tak zarówno „Tytuł. Podtytuł”,
         jak i „Cykl. Tytuł” (np. „The Naturals. Więzy krwi”, gdzie na LC tytułem
         jest „Więzy krwi”, a „The Naturals” cyklem) – dlatego próbujemy obu
-        części. Zwraca krotkę ``(przed, po)``; pusty człon to ``None``.
+        części. Separatorem jest tylko kropka lub dwukropek, po których
+        następuje odstęp albo koniec tytułu, i których nie poprzedza inicjał
+        (pojedyncza wielka litera) – kropka w skrótach („cz.1”, „t.2”)
+        i w inicjałach („J.R.R.”) nie dzieli tytułu (dla „Czarodziejski
+        statek cz.1” powstawało bezsensowne zapytanie „Hobb 1”).
+        Zwraca krotkę ``(przed, po)``; pusty człon to ``None``.
         """
         if not title:
             return (None, None)
-        positions = [title.find(sep) for sep in ('.', ':') if sep in title]
-        if not positions:
+        # separator: kropka/dwukropek z odstępem (lub końcem) po sobie, ale nie
+        # po pojedynczej wielkiej literze (inicjał: „J.R.R. Tolkien”, „Philip K. Dick”)
+        m = re.search(r'(?<![A-Z])[.:](?=\s|$)', title)
+        if not m:
             return (None, None)
-        pos = min(positions)
-        before = title[:pos].strip()
-        after = title[pos + 1:].strip()
+        before = title[:m.start()].strip()
+        after = title[m.end():].strip()
         return (before or None, after or None)
 
     def _query_variants(self, title, authors):
@@ -756,11 +762,13 @@ class LubimyCzytac(Source):
         Wynik „słaby” (np. same książki o tym tytule, ale innych autorów –
         LC chętnie zwraca takie przy nieudanym zapytaniu) nie kończy
         wyszukiwania; zapamiętujemy go jako rezerwę i próbujemy dalej.
-        Gdy żaden wariant nie da wyniku mocnego, zwracamy rezerwę
-        (pierwszą niepustą listę kandydatów), bo lepiej pokazać użytkownikowi
-        cokolwiek niż nic. Identyczne zapytania (np. przy opcji „LC website
-        has search engine issues”, która usuwa autora z każdego wariantu)
-        wykonujemy tylko raz.
+        Gdy żaden wariant nie da wyniku mocnego, zwracamy rezerwę – pierwszą
+        niepustą listę kandydatów słabych (zgodny tylko tytuł albo tylko autor).
+        Wyniki niezgodne ani z tytułem, ani z autorem nie są kandydatami, więc
+        gdy LC nie zna szukanego tytułu, wtyczka kończy bez wyników zamiast
+        podsuwać przypadkowe książki. Identyczne zapytania (np. przy opcji
+        „LC website has search engine issues”, która usuwa autora z każdego
+        wariantu) wykonujemy tylko raz.
 
         :param authors: autorzy w zapisie z calibre (do zapytania)
         :param authors_lc: autorzy w konwencji LC „Imię Nazwisko” (do porównań)
@@ -847,41 +855,78 @@ class LubimyCzytac(Source):
                     return True
         return False
 
+    def _normalize_title(self, title):
+        """
+        Sprowadza tytuł do postaci porównywalnej: bez diakrytyków, małe litery,
+        bez przecinków, kropek, dwukropków, średników, dywizów i pytajników,
+        bez zer wiodących w liczbach („#04” → „#4”, „Tom 01” → „Tom 1”)
+        i z pojedynczymi odstępami. Tą samą funkcją normalizujemy tytuł
+        z calibre i tytuły z kafelków LC, więc porównanie jest symetryczne.
+        """
+        if not title:
+            return ''
+        title = get_udc().decode(title).lower()
+        for ch in (',', '.', ':', ';', '-', '?'):
+            title = title.replace(ch, '')
+        title = re.sub(r'\b0+(?=\d)', '', title)
+        return re.sub(r'\s+', ' ', title).strip()
+
+    def _is_collective_title(self, title):
+        """
+        ``True`` dla tytułów wydań zbiorczych: LC wypisuje w nich kilka
+        utworów po średniku („Król afer; Ostatni sędzia; Wielki gracz”) albo
+        zaczyna tytuł od „KSIĄŻKI WYBRANE:”. Taki tytuł zawiera tytuł szukanej
+        książki jako fragment, więc bez tego rozpoznania pakiet uchodziłby za
+        wynik mocny i – przy „Fast matching” – kończył wyszukiwanie.
+        """
+        if not title:
+            return False
+        t = get_udc().decode(title).lower().strip()
+        return ';' in t or t.startswith('ksiazki wybrane')
+
     def _parse_search_results(self, log, orig_title, orig_authors, hiddenauthors, root, matches):
         """
-        Analizuje stronę wyników wyszukiwarki LC i dopisuje do listy ``matches``
+        Analizuje stronę wyników wyszukiwarki LC i wpisuje do listy ``matches``
         adresy książek pasujących do zapytania. Zwraca ``True``, gdy znaleziono
         wynik „mocny” (zgodny z tytułem i autorem) – ``_search`` kończy wtedy
         kolejne próby.
 
         Każdy wynik (kafelek ``book-card``) porównujemy z zapytaniem po
-        znormalizowaniu tytułów (bez diakrytyków, małe litery, bez części
-        interpunkcji) i autorów (bez diakrytyków, małe litery):
+        znormalizowaniu tytułów (``_normalize_title``) i autorów (bez
+        diakrytyków, małe litery). Kandydaci trafiają do czterech klas,
+        w kolejności z listy LC:
 
-        * zgodny tytuł **i** autor – wynik mocny; przy włączonym „Fast matching”
-          kończy analizę i zostaje jedynym kandydatem, bez niego trafia na
-          początek listy;
-        * zgodność „odwrotna” (autor w polu tytułu i tytuł w polu autora –
-          zdarza się w LC) – traktowana jak wynik mocny; eksperymentalne;
-        * zgodny tytuł i autor „schowany” (wariant zapytania bez autora) –
-          jak wyżej;
-        * zgodny tylko tytuł – kandydat słaby; gdy użytkownik nie podał
-          autorów, nic lepszego nie da się osiągnąć, więc liczy się jako mocny;
-        * zgodny tylko autor – kandydat słaby o niższym priorytecie;
-        * nic nie pasuje – wynik trafia na listę zapasową ``no_matches``,
-          z której korzystamy tylko wtedy, gdy nie znaleziono nic innego.
+        * **dokładny tytuł i autor** – tytuł identyczny po normalizacji;
+        * **częściowy tytuł i autor** – tytuł z calibre jest fragmentem tytułu
+          LC albo odwrotnie (np. „Hobbit” i „Hobbit, czyli tam i z powrotem”);
+          tu trafia też zgodność „odwrotna” (autor w polu tytułu i tytuł w polu
+          autora – zdarza się w LC; eksperymentalne);
+        * **tylko tytuł** – kandydat słaby; tu lądują także wydania zbiorcze
+          (``_is_collective_title``), które zawierają szukany tytuł jedynie
+          jako jeden z kilku utworów;
+        * **tylko autor** – kandydat słaby o najniższym priorytecie.
 
-        Liczbę kandydatów ogranicza opcja „Maximum title/author search matches”.
-        Po osiągnięciu limitu nie przerywamy jednak analizy strony (to nic nie
-        kosztuje – strona jest już pobrana): wynik mocny znaleziony dalej
-        nadal zostaje uwzględniony, zastępując listę („Fast matching”) albo
-        wypierając ostatniego słabego kandydata.
+        Autor zgodny to autor z zapytania albo autor „schowany” (wariant
+        zapytania bez autora). Gdy użytkownik nie podał autorów, zgodny tytuł
+        to wszystko, co możemy sprawdzić, więc liczy się jak wynik mocny.
+
+        Dokładny tytuł ma pierwszeństwo przed częściowym niezależnie od
+        kolejności na stronie LC: dla „Cała prawda o planecie Ksi” LC zwraca
+        najpierw zbiór „Cała prawda o planecie Ksi. Drugie spojrzenie…”,
+        a dopiero potem właściwą książkę. Przy włączonym „Fast matching”
+        jedynym kandydatem zostaje pierwszy dokładny wynik mocny (albo pierwszy
+        częściowy, gdy dokładnego nie ma); bez niego lista to kolejno: dokładne,
+        częściowe, słabe – do limitu „Maximum title/author search matches”.
+
+        Wyniki niezgodne ani z tytułem, ani z autorem są odrzucane. Do wersji
+        2.4.0 trafiały na listę zapasową i wracały do calibre, gdy nic innego
+        nie pasowało – w praktyce były to przypadkowe książki.
 
         :param orig_title: szukany tytuł (wariant użyty w zapytaniu, bez diakrytyków)
         :param orig_authors: autorzy w konwencji LC, gdy byli w zapytaniu (inaczej ``None``)
         :param hiddenauthors: autorzy w konwencji LC przy zapytaniu bez autora (inaczej ``None``)
         :param root: sparsowane drzewo HTML strony wyników
-        :param matches: lista wyjściowa – adresy kandydatów (modyfikowana w miejscu)
+        :param matches: lista wyjściowa – adresy kandydatów (zastępowana w miejscu)
         """
 
         # Dokładne dopasowanie tokenu klasy: contains(@class,"book-card") łapałoby
@@ -896,24 +941,22 @@ class LubimyCzytac(Source):
         max_results = cfg.plugin_prefs[cfg.STORE_NAME].get(cfg.KEY_MAX_DOWNLOADS, cfg.DEFAULT_STORE_VALUES[cfg.KEY_MAX_DOWNLOADS])
 
         no_author_info = not orig_authors and not hiddenauthors
-        strong = False
-        no_matches = []
 
         if orig_authors is not None:
             orig_authors = [lower(a) for a in orig_authors]
         if hiddenauthors is not None:
             hiddenauthors = [lower(a) for a in hiddenauthors]
-        if orig_title is not None:
-            orig_title = orig_title.lower()
-            orig_title = orig_title.replace('  ',' ').replace(',','').replace('.','').replace(':','').replace(';','').replace('-','').replace('?','').replace('  ',' ')
+        orig_title = self._normalize_title(orig_title)
 
-        def put_first(book_url):
-            """Wstawia kandydata na początek listy, nie przekraczając limitu."""
-            if book_url in matches:
-                matches.remove(book_url)
-            matches.insert(0, book_url)
-            while len(matches) > max_results:
-                matches.pop()
+        # Klasy kandydatów (adresy w kolejności z listy LC, bez powtórzeń)
+        exact_strong = []
+        partial_strong = []
+        weak_title = []
+        weak_author = []
+
+        def add(bucket, book_url):
+            if book_url not in bucket:
+                bucket.append(book_url)
 
         i = 0
         for result in results:
@@ -931,24 +974,19 @@ class LubimyCzytac(Source):
 
             if not title or not book_url or not authors:
                 continue
-            title = title[0]
+            raw_title = title[0]
             book_url = LubimyCzytac.BASE_URL + book_url[0]
 
             # Normalizujemy autorów z wyniku (bez diakrytyków, małe litery)
-            authors = [get_udc().decode(a) for a in authors]
-            authors = [lower(a) for a in authors]
-
-            # Normalizujemy tytuł do porównania: bez obcych diakrytyków,
-            # małe litery, bez części interpunkcji i podwójnych odstępów
-            title = get_udc().decode(title)
-            title = title.lower().strip()
-            title = title.replace('  ',' ').replace(',','').replace('.','').replace(':','').replace(';','').replace('-','').replace('?','').replace('  ',' ')
+            authors = [lower(get_udc().decode(a)) for a in authors]
+            title = self._normalize_title(raw_title)
 
             title_ok = bool(self.match(title, orig_title))
+            exact = title_ok and title == orig_title
+            collective = title_ok and not exact and self._is_collective_title(raw_title)
             author_ok = self._authors_agree(authors, orig_authors)
             hidden_ok = self._authors_agree(authors, hiddenauthors)
             inverse_ok = bool(orig_authors) and bool(self.match(authors[0], orig_title)) and bool(self.match(title, orig_authors[0]))
-            cap_reached = len(matches) >= max_results
 
             log.info('''[%s] Original title: %s,
     Title: %s,
@@ -956,73 +994,64 @@ class LubimyCzytac(Source):
     Hidden authors: %s,
     Authors:%s,
     Book url: %s
-    title_ok=%s author_ok=%s hidden_ok=%s inverse_ok=%s'''
+    title_ok=%s exact=%s collective=%s author_ok=%s hidden_ok=%s inverse_ok=%s'''
     % (i, orig_title, title, orig_authors, hiddenauthors, authors, book_url,
-       title_ok, author_ok, hidden_ok, inverse_ok))
+       title_ok, exact, collective, author_ok, hidden_ok, inverse_ok))
 
-            if title_ok and author_ok:
-                # Zgodność tytułu i autora ma najwyższy priorytet. Nie jest to
-                # rozwiązanie idealne: w przypadku wydań zbiorczych przed szukaną
-                # pozycją może znaleźć się pakiet i to on zostanie uznany za zgodny –
-                # stąd opcja „Fast matching” w konfiguracji.
-                strong = True
-                if fast_match:
-                    del matches[:]
-                    matches.insert(0, book_url)
-                    log.info('[%s] matches title and authors' % (i))
-                    break
-                put_first(book_url)
-                log.info('BECKY INFO: [%s] matches title and authors (na poczatek listy)' % (i))
+            if title_ok and (author_ok or hidden_ok or no_author_info):
+                if author_ok:
+                    why = 'authors'
+                elif hidden_ok:
+                    why = 'hidden authors'
+                else:
+                    why = 'title only (no authors in calibre)'
+                if collective:
+                    add(weak_title, book_url)
+                    log.info('BECKY INFO: [%s] wydanie zbiorcze zawierajace szukany tytul - tylko slaby kandydat' % (i))
+                elif exact:
+                    add(exact_strong, book_url)
+                    log.info('BECKY INFO: [%s] matches title and %s (dokladny tytul)' % (i, why))
+                else:
+                    add(partial_strong, book_url)
+                    log.info('BECKY INFO: [%s] matches title and %s (czesciowo)' % (i, why))
                 continue
 
             if inverse_ok:
-                # Zgodność odwrotna (autor w tytule, tytuł w autorze) jest opcją
-                # eksperymentalną i zapewne zostanie usunięta w przyszłości.
-                strong = True
-                del matches[:]
-                matches.insert(0, book_url)
+                add(partial_strong, book_url)
                 log.info('BECKY INFO: Jest zgodnosc odwrotna!')
                 log.info('BECKY INFO: [%s] matches inverse title and authors' % (i))
-                break
-
-            if title_ok and hidden_ok:
-                # Wariant zapytania bez autora, ale wynik zgadza się ze schowanym autorem
-                strong = True
-                if fast_match:
-                    del matches[:]
-                    matches.insert(0, book_url)
-                    log.info('BECKY INFO: [%s] plus hidden authors' % (i))
-                    break
-                put_first(book_url)
-                log.info('BECKY INFO: [%s] plus hidden authors (na poczatek listy)' % (i))
                 continue
 
             if title_ok:
-                if no_author_info:
-                    # Bez autorów w zapytaniu zgodny tytuł to wszystko, co możemy sprawdzić
-                    strong = True
-                if not cap_reached and book_url not in matches:
-                    matches.append(book_url)
-                    log.info('BECKY INFO: [%s] matches title (w przyblizeniu)' % (i))
-                elif cap_reached:
-                    log.info('BECKY INFO: [%s] matches title (w przyblizeniu), ale limit kandydatow osiagniety' % (i))
+                add(weak_title, book_url)
+                log.info('BECKY INFO: [%s] matches title (w przyblizeniu)' % (i))
                 continue
 
             if author_ok:
-                if not cap_reached and book_url not in matches:
-                    matches.append(book_url)
-                    log.info('BECKY INFO: [%s] matches authors' % (i))
-                elif cap_reached:
-                    log.info('BECKY INFO: [%s] matches authors, ale limit kandydatow osiagniety' % (i))
+                add(weak_author, book_url)
+                log.info('BECKY INFO: [%s] matches authors' % (i))
                 continue
 
-            no_matches.append(book_url)
-            log.info('BECKY INFO: [%s] no matches' % (i))
+            log.info('BECKY INFO: [%s] no matches - odrzucony' % (i))
 
-        # Gdy nic nie pasowało, lepiej pokazać użytkownikowi cokolwiek niż nic
-        if no_matches and not matches:
-            matches.extend(no_matches[:max_results])
+        strong = bool(exact_strong or partial_strong)
+        if strong and fast_match and not no_author_info:
+            # „Fast matching”: zostaje jeden kandydat – pierwszy dokładny,
+            # a gdy dokładnego nie ma, pierwszy częściowy
+            chosen = (exact_strong or partial_strong)[:1]
+            log.info('BECKY INFO: fast match - zostaje %s' % chosen[0])
+        else:
+            chosen = []
+            for bucket in (exact_strong, partial_strong, weak_title, weak_author):
+                for book_url in bucket:
+                    if book_url not in chosen:
+                        chosen.append(book_url)
+            if len(chosen) > max_results:
+                log.info('BECKY INFO: %d kandydatow, limit %d - reszta odrzucona' % (len(chosen), max_results))
+                chosen = chosen[:max_results]
 
+        del matches[:]
+        matches.extend(chosen)
         return strong
 
     def match(self, item1, item2):
@@ -1161,16 +1190,41 @@ if __name__ == '__main__':  # testy
         def test_split_title_on_dot_or_colon(self):
             self.assertEqual(self.plugin._split_title('The Naturals. Więzy krwi'), ('The Naturals', 'Więzy krwi'))
             self.assertEqual(self.plugin._split_title('The Naturals: Więzy krwi'), ('The Naturals', 'Więzy krwi'))
+            self.assertEqual(self.plugin._split_title('Summoner Zaklinacz 1. Początek'), ('Summoner Zaklinacz 1', 'Początek'))
             self.assertEqual(self.plugin._split_title('Hobbit'), (None, None))
             self.assertEqual(self.plugin._split_title('Koniec.'), ('Koniec', None))
             self.assertEqual(self.plugin._split_title(''), (None, None))
+            # kropka w skrócie lub inicjale nie jest separatorem
+            self.assertEqual(self.plugin._split_title('Czarodziejski statek cz.1'), (None, None))
+            self.assertEqual(self.plugin._split_title('Opowieści J.R.R. Tolkiena'), (None, None))
+            self.assertEqual(self.plugin._split_title('Ubik Philipa K. Dicka'), (None, None))
+            self.assertEqual(self.plugin._split_title('Achaja. Tom II'), ('Achaja', 'Tom II'))
+
+        def test_normalize_title(self):
+            self.assertEqual(self.plugin._normalize_title('Moje szczęśliwe małżeństwo #04'), 'moje szczesliwe malzenstwo #4')
+            self.assertEqual(self.plugin._normalize_title('Pomnik Cesarzowej Achai - Tom I'), 'pomnik cesarzowej achai tom i')
+            self.assertEqual(self.plugin._normalize_title('Cała prawda o planecie Ksi.'), 'cala prawda o planecie ksi')
+            self.assertEqual(self.plugin._normalize_title('Czarodziejski statek cz.1'), 'czarodziejski statek cz1')
+            self.assertEqual(self.plugin._normalize_title('Rok 2004'), 'rok 2004')
+            self.assertEqual(self.plugin._normalize_title(''), '')
+            self.assertEqual(self.plugin._normalize_title(None), '')
+
+        def test_collective_title(self):
+            self.assertTrue(self.plugin._is_collective_title('Król afer; Ostatni sędzia; Wielki gracz'))
+            self.assertTrue(self.plugin._is_collective_title('KSIĄŻKI WYBRANE: Uliczny adwokat, Ocean miłości'))
+            self.assertFalse(self.plugin._is_collective_title('Igrzyska Śmierci. Trylogia'))
+            self.assertFalse(self.plugin._is_collective_title('Cała prawda o planecie Ksi. Drugie spojrzenie na planetę Ksi'))
+            self.assertFalse(self.plugin._is_collective_title(''))
 
         def test_query_variants_order(self):
-            labels = [v[0] for v in self.plugin._query_variants('A. B', ['X Y'])]
+            labels = [v[0] for v in self.plugin._query_variants('Cykl. Tytul', ['X Y'])]
             self.assertEqual(labels, ['autor + pelny tytul', 'autor + tytul przed separatorem',
                                       'autor + tytul po separatorze', 'tylko pelny tytul',
                                       'tylko tytul przed separatorem'])
-            self.assertEqual([v[0] for v in self.plugin._query_variants('A', None)], ['tylko pelny tytul'])
+            self.assertEqual([v[0] for v in self.plugin._query_variants('Tytul', None)], ['tylko pelny tytul'])
+            # tytuł z kropką w inicjale: bez wariantów „przed/po separatorze”
+            self.assertEqual([v[0] for v in self.plugin._query_variants('Ubik Philipa K. Dicka', ['X Y'])],
+                             ['autor + pelny tytul', 'tylko pelny tytul'])
 
         def test_surname(self):
             self.assertEqual(self.plugin._surname('j. r. r. tolkien'), 'tolkien')
@@ -1264,6 +1318,30 @@ if __name__ == '__main__':  # testy
           [
              title_test('Ostatni. Prawdziwa historia żołnierza warszawskiej mafii'),
              authors_test(['Marzena Matuszak'], subset=True),
+          ]
+        ),
+
+        # Przypadki przez wyszukiwarkę (bez identyfikatora LC) – od 2.4.1:
+        # dokładny tytuł ma pierwszeństwo przed zbiorem „…Drugie spojrzenie…”,
+        # a zero wiodące w numerze tomu („#04” vs „#4” na LC) nie psuje dopasowania.
+        (
+          {
+             'title':'Cała prawda o planecie Ksi',
+             'authors':['Janusz A. Zajdel']
+          },
+          [
+             title_test('Cała prawda o planecie Ksi', exact=True),
+             authors_test(['Janusz A. Zajdel']),
+          ]
+        ),
+        (
+          {
+             'title':'Moje szczęśliwe małżeństwo #04',
+             'authors':['Akumi Agitogi']
+          },
+          [
+             title_test('Moje szczęśliwe małżeństwo #4', exact=True),
+             authors_test(['Akumi Agitogi'], subset=True),
           ]
         ),
     ]
