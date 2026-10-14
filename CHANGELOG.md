@@ -2,6 +2,12 @@
 
 Wpisy są po angielsku, bo te same notatki publikujemy w wątku wtyczki na forum MobileRead. Najnowsza wersja na górze.
 
+## Wersja 2.4.2 – 15 Oct 2026
+*Wydanie przygotowane przez Becky.*
+- Added: The optional 'Suggest a manual search when nothing is found' setting (disabled by default). When LubimyCzytac does not know the title, the plugin adds a virtual result whose description contains links to a Google and DuckDuckGo search limited to lubimyczytac.pl, a link to the LubimyCzytac search and instructions for the lubimyczytac:<ID> identifier. Pages of editions published under another title are indexed by web search engines even though the LubimyCzytac search engine does not return them.
+- Added: The plugin now recognises whether it was started from the single-book download window or from bulk download (by inspecting the calibre worker's main thread) and writes the mode to the log. The virtual result above is added only in the single-book window; bulk download would apply it to the book without asking.
+- Added: Tests for the manual-search hint (tests/test_hint.py).
+
 ## Wersja 2.4.1 – 15 Oct 2026
 *Wydanie przygotowane przez Becky.*
 - Fixed: An exact title match now takes precedence over a partial one regardless of the order on the LubimyCzytac results page. 'Cała prawda o planecie Ksi' no longer resolves to the collection 'Cała prawda o planecie Ksi. Drugie spojrzenie na planetę Ksi', which LubimyCzytac lists first.

@@ -7,6 +7,7 @@ Wyniki są powtarzalne, a jedna zmiana w dopasowywaniu tytułów od razu widać 
 ```
 tests/
   rare_cases.py     39 przypadków z oczekiwanym wynikiem; tryby `run` i `queries`
+  test_hint.py      podpowiedź ręcznego wyszukania: wirtualny wynik tylko w oknie pobierania
   recorded.json     81 zapytań do LC z 2026-10-14: {adres: [[tytuł, [autorzy], href], ...]}
   harness/stubs/    atrapy calibre, polyglot, mechanize, qt – tylko to, czego używa wtyczka
 ```
@@ -16,6 +17,7 @@ Uruchomienie (Python 3 i pakiet `lxml`, w katalogu `tests/`):
 ```bash
 python3 rare_cases.py run recorded.json   # przebieg _search na nagraniach, PASS/FAIL, kod wyjścia
 python3 rare_cases.py queries             # adresy zapytań, które wysłałaby wtyczka
+python3 test_hint.py                      # identify() z pustą stroną LC: kiedy pojawia się podpowiedź
 ```
 
 Kod wtyczki jest ładowany wprost z katalogu nadrzędnego; inny katalog wskazuje zmienna

@@ -31,9 +31,9 @@ __docformat__ = 'restructuredtext en'
 
 # Numer wersji wtyczki (krotka wymagana przez calibre). Zmieniamy go tylko tutaj –
 # tekstowa postać (PLUGIN_VERSION w klasie LubimyCzytac) jest wyliczana z tej krotki.
-PLUGINVER = (2, 4, 1)
+PLUGINVER = (2, 4, 2)
 
-import time, re
+import sys, time, re, threading
 
 try:
     from urllib.parse import quote
@@ -106,6 +106,52 @@ def cleanup_title(s):
     s = trailing_paren_pat.sub('', s)
     s = whitespace_pat.sub(' ', s)
     return s.strip()
+
+
+def detect_download_mode():
+    """
+    Rozpoznaje, skąd calibre wywołało ``identify()``:
+
+    * ``'single'``  – okno „Pobierz metadane” dla jednej książki
+      (funkcja ``single_identify`` w ``calibre.ebooks.metadata.sources.worker``);
+    * ``'bulk'``    – pobieranie masowe (funkcja ``main`` w tym samym module);
+    * ``'unknown'`` – nic nie rozpoznano (np. testy z ``calibre-debug``,
+      pobieranie samej okładki, inna wersja calibre).
+
+    Wtyczka działa we własnym wątku, więc na własnym stosie niczego nie
+    zobaczy – zaglądamy w stos wątku głównego procesu roboczego calibre
+    (``sys._current_frames``). Nazwy obu funkcji są wewnętrzne dla calibre,
+    ale nie zmieniły się od 2011 roku; każdy błąd lub brak rozpoznania daje
+    ``'unknown'``, więc wykrycie nigdy nie może zepsuć pobierania.
+
+    Po co: w trybie masowym calibre stosuje pierwszy wynik bez pokazywania
+    listy, dlatego wirtualny wynik z podpowiedzią (``_manual_search_result``)
+    wolno dodać tylko w oknie pojedynczego pobierania.
+    """
+    try:
+        if hasattr(threading, 'main_thread'):
+            main = threading.main_thread()
+        else:
+            # Python 2 (calibre 3.48) nie ma threading.main_thread()
+            main = None
+            for t in threading.enumerate():
+                if isinstance(t, threading._MainThread):
+                    main = t
+                    break
+        frame = sys._current_frames().get(main.ident) if main is not None else None
+        while frame is not None:
+            name = frame.f_code.co_name
+            module = frame.f_globals.get('__name__', '')
+            if module.endswith('metadata.sources.worker'):
+                if name == 'single_identify':
+                    return 'single'
+                if name == 'main':
+                    return 'bulk'
+            frame = frame.f_back
+    except Exception:
+        pass
+    return 'unknown'
+
 
 
 @total_ordering
@@ -529,11 +575,18 @@ class LubimyCzytac(Source):
         log.info('\nTitle: %s\nAuthors: %s\n'%(title, authors))
         br = self.browser
 
+        # Tytuł i autorzy dokładnie tak, jak podało calibre (z diakrytykami) –
+        # do wirtualnego wyniku z podpowiedzią, gdy nic nie znajdziemy
+        orig_title = title
+        orig_authors = list(authors) if authors else None
+        download_mode = detect_download_mode()
+        log.info('BECKY INFO: tryb pobierania: %s' % download_mode)
+
         from . import config as cfg
         # Import wewnątrz metody (nie na górze modułu), żeby calibre przy starcie
         # ładowało tylko ten plik; funkcje pomocnicze dzielimy z worker.py zamiast
         # trzymać ich kopie
-        from .worker import Worker, swap_names, unique
+        from .worker import Worker, swap_names, unique, html_escape
 
         # Zapisujemy efektywne ustawienia w logu, aby można było odtworzyć
         # konfigurację użytkownika podczas analizy zgłoszonego problemu
@@ -563,6 +616,7 @@ class LubimyCzytac(Source):
             ('swapNames', 'Zamiana imienia i nazwiska'),
             ('LCissue', 'Tryb diagnostyczny problemow LC'),
             ('preferISBNMatch', 'Preferuj zgodnosc ISBN'),
+            ('suggestManualSearch', 'Podpowiedz reczne wyszukanie przy braku wynikow'),
         )
         log.info('--- KONFIGURACJA WTYCZKI LUBIMYCZYTAC ---')
         for key, label in config_labels:
@@ -599,6 +653,14 @@ class LubimyCzytac(Source):
 
         if not matches:
             log.error('No matches found for: %r / %r' % (title, authors))
+            suggest = prefs.get(cfg.SUGGEST_MANUAL_SEARCH, cfg.DEFAULT_STORE_VALUES[cfg.SUGGEST_MANUAL_SEARCH])
+            if suggest and orig_title and download_mode == 'single':
+                # Wirtualny wynik z linkami do ręcznego wyszukania – tylko w oknie
+                # pojedynczego pobierania (w masowym calibre zastosowałoby go bez pytania)
+                log.info('BECKY HINT: dodaje wirtualny wynik z podpowiedzia recznego wyszukania')
+                result_queue.put(self._manual_search_result(orig_title, orig_authors, html_escape))
+            elif suggest:
+                log.info('BECKY INFO: podpowiedz recznego wyszukania pominieta (tryb: %s)' % download_mode)
             return
 
         # Usuwamy duplikaty z listy kandydatów, zachowując kolejność – ranking
@@ -687,6 +749,56 @@ class LubimyCzytac(Source):
                     log.info('BECKY INFO:   odrzucam: %s | %s' % (mi.identifiers.get('lubimyczytac'), ', '.join(mi.authors or [])))
             return agreeing
         return results
+
+    def _manual_search_hint(self, title, authors, html_escape):
+        """
+        Buduje HTML podpowiedzi do ręcznego wyszukania książki, gdy LC nic nie
+        znalazło. Wyszukiwarka LC zna tylko wydanie główne, ale strony wydań
+        wydanych pod innym tytułem są indeksowane przez wyszukiwarki
+        internetowe – stąd linki do Google i DuckDuckGo zawężone do
+        ``site:lubimyczytac.pl`` oraz do własnej wyszukiwarki LC. Na końcu
+        instrukcja, jak wpisać znaleziony identyfikator (``lubimyczytac:<ID>``).
+        Panel opisu w oknie pobierania calibre renderuje HTML i otwiera linki
+        http/https w przeglądarce. Wszystko w ``_()``, bo to tekst dla użytkownika.
+        """
+        author = authors[0] if authors else ''
+        phrase = ('"%s" %s' % (title, author)).strip()
+        def q(text):
+            return quote(text.encode('utf-8') if isinstance(text, unicode) else text)
+        web_query = q('site:lubimyczytac.pl ' + phrase)
+        lc_query = q(('%s %s' % (title, author)).strip())
+        parts = [
+            '<p><span style="color:red; font-weight:bold;">%s</span> %s</p>' % (
+                html_escape(_('WARNING: LubimyCzytac did not find this book.')),
+                html_escape(_('This entry is not book metadata - do not apply it.'))),
+            '<p>%s</p>' % html_escape(_('The LubimyCzytac search engine knows only the main edition of each book. '
+                                        'An edition published under a different title can usually be found with a web search:')),
+            '<ul>',
+            '<li><a href="https://www.google.com/search?q=%s">%s</a></li>' % (
+                web_query, html_escape(_('Search Google (lubimyczytac.pl only)'))),
+            '<li><a href="https://duckduckgo.com/?q=%s">%s</a></li>' % (
+                web_query, html_escape(_('Search DuckDuckGo (lubimyczytac.pl only)'))),
+            '<li><a href="https://lubimyczytac.pl/szukaj/ksiazki?phrase=%s">%s</a></li>' % (
+                lc_query, html_escape(_('Search on LubimyCzytac'))),
+            '</ul>',
+            '<p>%s</p>' % html_escape(_('When you find the page of your edition, copy the number from its address '
+                                        '(for example 74063 from lubimyczytac.pl/ksiazka/74063/krol-pozwow), enter '
+                                        'lubimyczytac:74063 in the identifiers field of the book and download the metadata again.')),
+        ]
+        return ''.join(parts)
+
+    def _manual_search_result(self, title, authors, html_escape):
+        """
+        Wirtualny wynik dla okna pobierania: tytuł i autorzy dokładnie takie,
+        jak w calibre (przypadkowe zastosowanie zmieni tylko opis), bez
+        identyfikatora LC (ID 0 dałoby zły adres i próbę pobrania okładki),
+        a w opisie podpowiedź z ``_manual_search_hint``.
+        """
+        from calibre.ebooks.metadata.book.base import Metadata
+        mi = Metadata(title, authors or [_('Unknown')])
+        mi.comments = self._manual_search_hint(title, authors, html_escape)
+        mi.source_relevance = 0
+        return mi
 
     def _split_title(self, title):
         """
@@ -1208,6 +1320,42 @@ if __name__ == '__main__':  # testy
             self.assertEqual(self.plugin._normalize_title('Rok 2004'), 'rok 2004')
             self.assertEqual(self.plugin._normalize_title(''), '')
             self.assertEqual(self.plugin._normalize_title(None), '')
+
+        def test_detect_download_mode(self):
+            # symulacja: wątek główny „czeka” w funkcji o nazwie jak w calibre,
+            # wtyczka sprawdza tryb z własnego wątku – dokładnie jak w procesie roboczym
+            import types
+            fake = types.ModuleType('calibre.ebooks.metadata.sources.worker')
+            seen = {}
+            def plugin_side(label):
+                seen[label] = detect_download_mode()
+            def identify(label):
+                t = threading.Thread(target=plugin_side, args=(label,))
+                t.start()
+                t.join()
+            src = ('def single_identify(title, authors, identifiers):\n    identify("okno")\n'
+                   'def main(do_identify, covers, metadata, ensure_fields, tdir):\n    identify("masowe")\n')
+            exec(compile(src, 'worker', 'exec'), fake.__dict__)
+            fake.identify = identify
+            fake.single_identify('t', ['a'], {})
+            fake.main(True, True, {}, None, '')
+            plugin_side('bezposrednio')
+            self.assertEqual(seen, {'okno': 'single', 'masowe': 'bulk', 'bezposrednio': 'unknown'})
+
+        def test_manual_search_hint(self):
+            # blok __main__ działa poza pakietem, więc zamiast worker.html_escape – odpowiednik
+            html_escape = lambda t: t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            html = self.plugin._manual_search_hint('Król <pozwów>', ['John Grisham'], html_escape)
+            self.assertIn('https://www.google.com/search?q=site%3Alubimyczytac.pl%20%22Kr%C3%B3l%20%3Cpozw%C3%B3w%3E%22%20John%20Grisham', html)
+            self.assertIn('https://duckduckgo.com/?q=site%3Alubimyczytac.pl', html)
+            self.assertIn('https://lubimyczytac.pl/szukaj/ksiazki?phrase=Kr%C3%B3l%20%3Cpozw%C3%B3w%3E%20John%20Grisham', html)
+            self.assertIn('lubimyczytac:74063', html)
+            self.assertNotIn('<pozwów>', html)      # tytuł w tekście jest zabezpieczony
+            html = self.plugin._manual_search_hint('Leonia', None, html_escape)
+            self.assertIn('%22Leonia%22', html)
+            mi = self.plugin._manual_search_result('Leonia', None, html_escape)
+            self.assertEqual((mi.title, mi.identifiers), ('Leonia', {}))
+            self.assertTrue(mi.comments.startswith('<p><span style="color:red'))
 
         def test_collective_title(self):
             self.assertTrue(self.plugin._is_collective_title('Król afer; Ostatni sędzia; Wielki gracz'))

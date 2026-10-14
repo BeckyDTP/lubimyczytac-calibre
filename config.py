@@ -51,6 +51,7 @@ KEY_MAX_DOWNLOADS = 'maxDownloads'          # maks. liczba kandydatów z listy w
 FAST_MATCH = 'fastMatch'                    # pierwszy wynik zgodny z tytułem i autorem kończy szukanie
 LC_ISSUE = 'LCissue'                        # wyszukiwarka LC ma problemy – szukaj tylko po tytule
 PREFER_ISBN_MATCH = 'preferISBNMatch'       # wybierz wydanie o ISBN zgodnym z calibre
+SUGGEST_MANUAL_SEARCH = 'suggestManualSearch'  # przy braku wyników wirtualny wynik z linkami do ręcznego szukania (tylko okno pobierania)
 
 # --- Metadane ---
 TAGS_AS = 'appendasTags'                    # co trafia do etykiet: 0 = kategoria, 1 = słowa kluczowe
@@ -100,7 +101,8 @@ DEFAULT_STORE_VALUES = {
     APPEND_FIRST_PUBDATE_PL: False,
     SWAP_NAMES: False,
     LC_ISSUE: False,
-    PREFER_ISBN_MATCH: False
+    PREFER_ISBN_MATCH: False,
+    SUGGEST_MANUAL_SEARCH: False
 }
 
 # Plik z ustawieniami. Zgodnie z konwencją calibre powinien leżeć
@@ -163,10 +165,20 @@ class ConfigWidget(DefaultConfigWidget):
         other_group_box_layout.addWidget(self.prefer_isbn_match_check, 4, 0, 1, 1)
         other_group_box_layout.addWidget(self.lc_search_engine_issue_check, 5, 0, 1, 1)
 
+        # Podpowiedź ręcznego wyszukania: wirtualny wynik z linkami, gdy LC nic nie zna.
+        # Tylko w oknie pojedynczego pobierania – w masowym calibre zastosowałoby go bez pytania.
+        self.suggest_manual_search_check = QCheckBox(_('Suggest a manual search when nothing is found'), self)
+        self.suggest_manual_search_check.setToolTip(_('When LubimyCzytac does not know the title, add a virtual result whose description\n'
+            'contains links to a web search limited to lubimyczytac.pl and instructions for the lubimyczytac:<ID> identifier.\n'
+            'Shown only in the single-book download window, never in bulk download.\n'
+            'If you use bulk download with LubimyCzytac, keep this option disabled.'))
+        other_group_box_layout.addWidget(self.suggest_manual_search_check, 6, 0, 1, 1)
+
         self.replaceISBN_check.setChecked(c.get(REPLACE_ISBN, DEFAULT_STORE_VALUES[REPLACE_ISBN]))
         self.lc_search_engine_issue_check.setChecked(c.get(LC_ISSUE, DEFAULT_STORE_VALUES[LC_ISSUE]))
         self.fastmatch_check.setChecked(c.get(FAST_MATCH, DEFAULT_STORE_VALUES[FAST_MATCH]))
         self.prefer_isbn_match_check.setChecked(c.get(PREFER_ISBN_MATCH, DEFAULT_STORE_VALUES[PREFER_ISBN_MATCH]))
+        self.suggest_manual_search_check.setChecked(c.get(SUGGEST_MANUAL_SEARCH, DEFAULT_STORE_VALUES[SUGGEST_MANUAL_SEARCH]))
 
         self.max_downloads_spin = QtWidgets.QSpinBox(self)
         self.max_downloads_spin.setMinimum(1)
@@ -319,6 +331,7 @@ class ConfigWidget(DefaultConfigWidget):
         new_prefs[LC_ISSUE] = self.lc_search_engine_issue_check.isChecked()
         new_prefs[FAST_MATCH] = self.fastmatch_check.isChecked()
         new_prefs[PREFER_ISBN_MATCH] = self.prefer_isbn_match_check.isChecked()
+        new_prefs[SUGGEST_MANUAL_SEARCH] = self.suggest_manual_search_check.isChecked()
 
         new_prefs[BEFORE_OTHER_EDITIONS_EXIST] = self.bother_editions_exist_check.isChecked()
         new_prefs[BEFORE_OTHER_EDITIONS_ALL] = self.bother_editions_all_check.isChecked()

@@ -43,6 +43,7 @@ Po instalacji ustawienia są dostępne w sekcji wtyczek źródeł metadanych. W�
 - zastępowanie istniejącego ISBN;
 - preferowanie wydania z dokładnie pasującym ISBN – opcja domyślnie wyłączona;
 - obsługa sytuacji, w których wewnętrzna wyszukiwarka serwisu działa nieprawidłowo;
+- podpowiedź ręcznego wyszukania, gdy LubimyCzytać nie zna tytułu (wirtualny wynik z linkami; tylko w oknie pojedynczego pobierania) – opcja domyślnie wyłączona;
 - wybór dodatkowych informacji dołączanych do opisu, w tym informacji o innych wydaniach.
 
 Dostępne opcje i ich działanie mogą zmieniać się wraz z kolejnymi wersjami wtyczki.
@@ -53,6 +54,8 @@ Wyszukiwarka LubimyCzytać zna tylko wydanie główne każdej książki, a calib
 
 - wpisz w calibre ISBN tego wydania i włącz opcję **Prefer matching ISBN** – wtyczka przejrzy listę wydań znalezionej książki i wybierze to z pasującym ISBN (o ile LubimyCzytać zna ten numer);
 - wpisz identyfikator `lubimyczytac:<ID>` w polu identyfikatorów książki (ID to liczba z adresu strony wydania, np. `lubimyczytac:74063` dla `lubimyczytac.pl/ksiazka/74063/krol-pozwow`) i pobierz metadane ponownie – wtyczka pominie wyszukiwarkę i pobierze wskazaną stronę.
+
+Strony wydań wydanych pod innym tytułem są indeksowane przez wyszukiwarki internetowe, choć wyszukiwarka LubimyCzytać ich nie zwraca. Opcja **Suggest a manual search when nothing is found** dodaje w takiej sytuacji do okna wyników wirtualny wynik (ten sam tytuł i autor, czerwone ostrzeżenie w opisie, bez identyfikatora LC) z gotowymi linkami do wyszukania w Google i DuckDuckGo zawężonego do `lubimyczytac.pl`, do wyszukiwarki LC oraz z instrukcją wpisania identyfikatora. Wynik pojawia się wyłącznie w oknie pobierania metadanych dla jednej książki – w pobieraniu masowym calibre zastosowałoby go bez pytania, dlatego wtyczka rozpoznaje tryb i w masowym podpowiedzi nie dodaje. Jeśli korzystasz z masowego pobierania z LC, zostaw tę opcję wyłączoną.
 
 ## Zgłaszanie błędów i propozycji
 
@@ -74,6 +77,7 @@ Przed opublikowaniem logu usuń dane prywatne. Zgłaszając problem z konkretną
 Najwięcej o działaniu wtyczki mówi dziennik pobierania metadanych, dostępny w oknie pobierania metadanych calibre po zakończeniu wyszukiwania. Wtyczka zapisuje w nim:
 
 - aktualną konfigurację (ułatwia odtworzenie problemu u innej osoby);
+- tryb pobierania rozpoznany przez wtyczkę (`tryb pobierania: single` – okno pojedynczej książki, `bulk` – pobieranie masowe, `unknown` – nie rozpoznano, np. w testach `calibre-debug`);
 - kolejne warianty zapytań do wyszukiwarki LubimyCzytać (`BECKY -- proba 1/5: autor + pelny tytul`) i powód przejścia do następnego;
 - ocenę każdego wyniku z listy (zgodność tytułu, autora, autora ukrytego) oraz kandydatów odrzuconych po pobraniu ich stron;
 - wskazówki `BECKY HINT`, gdy wtyczka celowo zrobiła coś inaczej niż zwykle.
