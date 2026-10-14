@@ -1,0 +1,278 @@
+# Lubimyczytac plugin translation file
+# Copyright (C) 2017-2026 Becky
+# This file is distributed under the same license as the Lubimyczytac plugin package.
+# Becky <becky@fr.pl>, 2017-2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Lubimyczytac plugin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-14 00:41+0200\n"
+"PO-Revision-Date: 2026-10-14 00:41+0200\n"
+"Last-Translator: Becky <becky@fr.pl>\n"
+"Language-Team: \n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.4.3\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
+"|| n%100>=20) ? 1 : 2);\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SearchPath-0: config.py\n"
+"X-Poedit-SearchPath-1: __init__.py\n"
+"X-Poedit-SearchPath-1: worker.py\n"
+"X-Poedit-SearchPath-2: __init__.py\n"
+
+#: __init__.py:103 __init__.py:361
+msgid "Unknown"
+msgstr ""
+
+#: __init__.py:247
+msgid "Download book metadata and covers from LubimyCzytac.pl"
+msgstr ""
+
+#: __init__.py:274
+msgid "Calibre"
+msgstr ""
+
+#: __init__.py:275
+msgid "Plugin version"
+msgstr ""
+
+#: __init__.py:275
+msgid ""
+"Please report bugs through the <a href=\"https://www.mobileread.com/forums/"
+"showthread.php?t=282922\">MobileRead</a> forum."
+msgstr ""
+
+#: config.py:136
+msgid "Other options"
+msgstr ""
+
+#: config.py:141
+msgid "Maximum title/author search matches to evaluate (1 = fastest):"
+msgstr ""
+
+#: config.py:142
+msgid ""
+"Increasing this value will take effect when doing\n"
+"title/author searches to consider more matches.\n"
+"\n"
+"This will increase the potential likelihood of not missing result\n"
+"although it does not guaranteed."
+msgstr ""
+
+#: config.py:146
+msgid "LC website has search engine issues"
+msgstr ""
+
+#: config.py:147
+msgid ""
+"You can check this box when there are issues with the internal search engine "
+"on the LC site\n"
+"(of course, the problem may be of a different nature)."
+msgstr ""
+
+#: config.py:149
+msgid "Append to Tags field in the Metadata:"
+msgstr ""
+
+#: config.py:150
+msgid "The genre or the keywords taken from LC will be appended as tags."
+msgstr ""
+
+#: config.py:151
+msgid "Download the ISBN number from the LC"
+msgstr ""
+
+#: config.py:152
+msgid ""
+"Replace the ISBN number when downloaded from the LC.\n"
+"If unchecked – leave the existing number unchanged."
+msgstr ""
+
+#: config.py:154
+msgid "Fast matching (the first one found that matches the title and author)"
+msgstr ""
+
+#: config.py:155
+msgid "This is a not perfect solution."
+msgstr ""
+
+#: config.py:156
+msgid "Prefer matching ISBN"
+msgstr ""
+
+#: config.py:157
+msgid ""
+"When an ISBN is supplied, check other editions and prefer an exact ISBN "
+"match.\n"
+"This may require additional requests to LubimyCzytac.pl."
+msgstr ""
+
+#: config.py:181 config.py:273
+msgid "Genre (Kategoria)"
+msgstr ""
+
+#: config.py:181 config.py:275
+msgid "Keywords"
+msgstr ""
+
+#: config.py:189
+msgid "Append at the beginning of the comment"
+msgstr ""
+
+#: config.py:195
+msgid "Inform me of existing editions"
+msgstr ""
+
+#: config.py:196
+msgid "If other editions exist - inform about it."
+msgstr ""
+
+#: config.py:197
+msgid "Full list of the other editions"
+msgstr ""
+
+#: config.py:198
+msgid "If other editions exist - list them all."
+msgstr ""
+
+#: config.py:199
+msgid "Short list of the other editions"
+msgstr ""
+
+#: config.py:200
+msgid "List of the other editions (without links)."
+msgstr ""
+
+#: config.py:201
+msgid "Add horizontal line before the comment"
+msgstr ""
+
+#: config.py:202
+msgid "If other editions exist - add horizontal line before the comment."
+msgstr ""
+
+#: config.py:215 config.py:221
+msgid "The date of the first publication"
+msgstr ""
+
+#: config.py:222
+msgid ""
+"If the information about the book will contain\n"
+"the date of the first publication\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+
+#: config.py:225
+msgid "The date of the first publication in Poland"
+msgstr ""
+
+#: config.py:226
+msgid ""
+"If the information about the book will contain\n"
+"the date of the first publication in Poland\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+
+#: config.py:237
+msgid "Reverse order in the author(s) field"
+msgstr ""
+
+#: config.py:243
+msgid "Last Name First Name in authors"
+msgstr ""
+
+#: config.py:244
+msgid ""
+"For users who prefer a surname before the first name in author metadata."
+msgstr ""
+
+#: config.py:253
+msgid "Append at the end of the comment"
+msgstr ""
+
+#: config.py:258
+msgid "Number of pages"
+msgstr ""
+
+#: config.py:259
+msgid ""
+"If the information about the book will contain the number of pages\n"
+"- it will be appended at the end of the comment.\n"
+"Form: Książka ma 123 strony."
+msgstr ""
+
+#: config.py:262
+msgid "Simplified form"
+msgstr ""
+
+#: config.py:263
+msgid "Use form: Liczba stron w książce: 123"
+msgstr ""
+
+#: config.py:264
+msgid "Original title"
+msgstr ""
+
+#: config.py:265
+msgid ""
+"If the information about the book will contain the original title\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+
+#: config.py:267
+msgid "Translator(s)"
+msgstr ""
+
+#: config.py:268
+msgid ""
+"If the information about the book will contain info about translators\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+
+#: config.py:270
+msgid "Book series (marketed as a group)"
+msgstr ""
+
+#: config.py:271
+msgid ""
+"If the information about the book will contain info about the book series\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+
+#: config.py:274
+msgid "Genre be appended at the end of the comment."
+msgstr ""
+
+#: config.py:276
+msgid ""
+"If the information about the book will contain the keywords\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+
+#: config.py:278
+msgid "Rating"
+msgstr ""
+
+#: config.py:279
+msgid "Append rating at the end of the comment."
+msgstr ""
+
+#: config.py:280
+msgid "Rating Count"
+msgstr ""
+
+#: config.py:281
+msgid "Append rating count at the end of the comment."
+msgstr ""
+
+#: config.py:282
+msgid "ID"
+msgstr ""
+
+#: config.py:283
+msgid "Append ID at the end of the comment."
+msgstr ""
