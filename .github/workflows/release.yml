@@ -1,0 +1,61 @@
+name: Zbuduj paczkę wtyczki
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+
+      # Jedno źródło prawdy o wersji: PLUGINVER w __init__.py, odczytywane tą
+      # samą funkcją, której używa build.py. Tag musi mieć postać v<wersja>,
+      # inaczej nie powstanie wydanie z mylącą nazwą.
+      - name: Sprawdź zgodność tagu z PLUGINVER
+        run: |
+          version=$(python3 -c 'import build; print(build.plugin_version())')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME nie zgadza się z PLUGINVER = $version (oczekiwano v$version)." >&2
+            exit 1
+          fi
+          echo "PLUGIN_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Zbuduj paczkę ZIP
+        run: python3 build.py
+
+      # Opis wydania = sekcja tej wersji z CHANGELOG.md (zamiast automatycznych
+      # notatek GitHuba z listą commitów).
+      - name: Wytnij notatki wydania z CHANGELOG.md
+        run: |
+          python3 - <<'EOF'
+          import os, re
+          version = os.environ['PLUGIN_VERSION']
+          text = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(r'^## Wersja %s\b.*?(?=^## Wersja |\Z)' % re.escape(version), text, re.M | re.S)
+          if m:
+              notes = m.group(0).strip()
+          else:
+              print('UWAGA: brak sekcji "## Wersja %s" w CHANGELOG.md' % version)
+              notes = 'Zobacz CHANGELOG.md.'
+          open('release-notes.md', 'w', encoding='utf-8').write(notes + '\n')
+          EOF
+          cat release-notes.md
+
+      - name: Zapewnij tag w repozytorium zdalnym
+        run: git push origin "refs/tags/$GITHUB_REF_NAME"
+
+      - name: Opublikuj wydanie
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "LubimyCzytac $PLUGIN_VERSION" \
+            --notes-file release-notes.md

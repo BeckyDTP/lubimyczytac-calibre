@@ -1,0 +1,342 @@
+# Lubimyczytac plugin translation file
+# Copyright (C) 2017-2026 Becky
+# This file is distributed under the same license as the Lubimyczytac plugin package.
+# Becky <becky@fr.pl>, 2017-2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Lubimyczytac plugin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-14 00:41+0200\n"
+"PO-Revision-Date: 2026-10-14 02:05+0200\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n>=2 && n<=4 ? 1 : 2);\n"
+"X-Generator: Poedit 2.4.3\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SearchPath-0: config.py\n"
+"X-Poedit-SearchPath-1: worker.py\n"
+"X-Poedit-SearchPath-2: __init__.py\n"
+
+#: __init__.py:103 __init__.py:361
+msgid "Unknown"
+msgstr "Neznámý"
+
+#: __init__.py:247
+msgid "Download book metadata and covers from LubimyCzytac.pl"
+msgstr "Stahuje informace a obálky z LubimyCzytac.pl"
+
+#: __init__.py:274
+msgid "Calibre"
+msgstr "Calibre"
+
+#: __init__.py:275
+msgid "Plugin version"
+msgstr "Verze modulu"
+
+#: __init__.py:275
+msgid ""
+"Please report bugs through the <a href=\"https://www.mobileread.com/forums/"
+"showthread.php?t=282922\">MobileRead</a> forum."
+msgstr ""
+"Chyby prosím hlaste skrze <a href=“https://www.mobileread.com/forums/"
+"showthread.php?t=282922”>MobileRead</a> fórum."
+
+#: config.py:136
+msgid "Other options"
+msgstr "Další možnosti"
+
+#: config.py:141
+msgid "Maximum title/author search matches to evaluate (1 = fastest):"
+msgstr ""
+"Maximální počet shod názvu/autora, které má modul hledat (1 = nejrychlejší)"
+
+#: config.py:142
+msgid ""
+"Increasing this value will take effect when doing\n"
+"title/author searches to consider more matches.\n"
+"\n"
+"This will increase the potential likelihood of not missing result\n"
+"although it does not guaranteed."
+msgstr ""
+"Zvýšením této hodnoty docílíte\n"
+"vícero výsledků hledání.\n"
+"\n"
+"To může zvýšit pravděpodobnost, že naleznete požadovanou\n"
+"publikaci. Avšak ne vždy je to zaručeno."
+
+#: config.py:146
+msgid "LC website has search engine issues"
+msgstr "Webové stránky LC mají problémy s vyhledávačem"
+
+#: config.py:147
+msgid ""
+"You can check this box when there are issues with the internal search engine "
+"on the LC site\n"
+"(of course, the problem may be of a different nature)."
+msgstr ""
+"Toto políčko můžete zaškrtnout, pokud se vyskytnou potíže s interním "
+"vyhledávačem na stránkách LC\n"
+"(samozřejmě může jít o problém jiné povahy)."
+
+#: config.py:149
+msgid "Append to Tags field in the Metadata:"
+msgstr "Přidat navíc do pole Štítky:"
+
+#: config.py:150
+msgid "The genre or the keywords taken from LC will be appended as tags."
+msgstr "Žánr nebo klíčová slova z LC budou přidána jako štítky."
+
+#: config.py:151
+msgid "Download the ISBN number from the LC"
+msgstr "Získat ISBN z LC"
+
+#: config.py:152
+msgid ""
+"Replace the ISBN number when downloaded from the LC.\n"
+"If unchecked – leave the existing number unchanged."
+msgstr ""
+"Přepíše ISBN identifikátor hodnotou získanou z LC.\n"
+"Pokud není zaškrtnuto - ponechá původní ISBN."
+
+#: config.py:154
+msgid "Fast matching (the first one found that matches the title and author)"
+msgstr "Rychlé přiřazování (první výsledek, který má shodný název a autora)"
+
+#: config.py:155
+msgid "This is a not perfect solution."
+msgstr "Toto není ideální řešení."
+
+#: config.py:156
+msgid "Prefer matching ISBN"
+msgstr "Upřednostnit shodné číslo ISBN"
+
+#: config.py:157
+msgid ""
+"When an ISBN is supplied, check other editions and prefer an exact ISBN "
+"match.\n"
+"This may require additional requests to LubimyCzytac.pl."
+msgstr ""
+"Pokud je zadáno číslo ISBN, zkontrolujte ostatní vydání a upřednostněte "
+"přesnou shodu s číslem ISBN.\n"
+"To může vyžadovat zaslání dalších dotazů na web LubimyCzytac.pl."
+
+#: config.py:181 config.py:273
+msgid "Genre (Kategoria)"
+msgstr "Žánr (Kategorie)"
+
+#: config.py:181 config.py:275
+msgid "Keywords"
+msgstr "Klíčová slova"
+
+#: config.py:189
+msgid "Append at the beginning of the comment"
+msgstr "Přidat na začátek komentáře"
+
+#: config.py:195
+msgid "Inform me of existing editions"
+msgstr "Informovat o existujících vydáních"
+
+#: config.py:196
+msgid "If other editions exist - inform about it."
+msgstr "Pokud existují jiná vydání - informuje o nich."
+
+#: config.py:197
+msgid "Full list of the other editions"
+msgstr "Celý seznam jiných vydání"
+
+#: config.py:198
+msgid "If other editions exist - list them all."
+msgstr "Pokud existují jiná vydání - vypíše je všechny."
+
+#: config.py:199
+msgid "Short list of the other editions"
+msgstr "Zkrácený seznam jiných vydání"
+
+#: config.py:200
+msgid "List of the other editions (without links)."
+msgstr "Seznam jiných vydání (bez odkazů)."
+
+#: config.py:201
+msgid "Add horizontal line before the comment"
+msgstr "Přidat vodorovnou čáru před komentář"
+
+#: config.py:202
+msgid "If other editions exist - add horizontal line before the comment."
+msgstr "Pokud existují jiná vydání - přidá vodorovnou čáru před komentář."
+
+#: config.py:215 config.py:221
+msgid "The date of the first publication"
+msgstr "Datum vydání první publikace"
+
+#: config.py:222
+msgid ""
+"If the information about the book will contain\n"
+"the date of the first publication\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Pokud informace o knize obsahuje\n"
+"datum prvního vydání knihy\n"
+"- bude přidáno na konec komentáře."
+
+#: config.py:225
+msgid "The date of the first publication in Poland"
+msgstr "Datum prvního vydání publikace v Polsku"
+
+#: config.py:226
+msgid ""
+"If the information about the book will contain\n"
+"the date of the first publication in Poland\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Pokud informace o knize obsahuje\n"
+"datum prvního vydání knihy v Polsku\n"
+"- bude přidáno na konec komentáře."
+
+#: config.py:237
+msgid "Reverse order in the author(s) field"
+msgstr "Přehozené pořadí v poli Autoři"
+
+#: config.py:243
+msgid "Last Name First Name in authors"
+msgstr "Příjmení Jméno v poli Autoři"
+
+#: config.py:244
+msgid ""
+"For users who prefer a surname before the first name in author metadata."
+msgstr "Pro uživatele, kteří preferují příjmení před jménem v poli Autoři."
+
+#: config.py:253
+msgid "Append at the end of the comment"
+msgstr "Přidat na konec komentáře"
+
+#: config.py:258
+msgid "Number of pages"
+msgstr "Počet stran"
+
+#: config.py:259
+msgid ""
+"If the information about the book will contain the number of pages\n"
+"- it will be appended at the end of the comment.\n"
+"Form: Książka ma 123 strony."
+msgstr ""
+"Pokud informace o knize obsahuje počet stran\n"
+"- bude přidán na konec komentáře.\n"
+"Formát: Książka ma 123 strony."
+
+#: config.py:262
+msgid "Simplified form"
+msgstr "Zjednodušená forma"
+
+#: config.py:263
+msgid "Use form: Liczba stron w książce: 123"
+msgstr "Použijte tento formát: Liczba stron w książce: 123"
+
+#: config.py:264
+msgid "Original title"
+msgstr "Původní název"
+
+#: config.py:265
+msgid ""
+"If the information about the book will contain the original title\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Pokud informace o knize obsahuje původní název knihy\n"
+"- bude přidán na konec komentáře."
+
+#: config.py:267
+msgid "Translator(s)"
+msgstr "Překladatel(é)"
+
+#: config.py:268
+msgid ""
+"If the information about the book will contain info about translators\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Pokud informace o knize obsahuje překladatelé\n"
+"- budou přidáni na konec komentáře."
+
+#: config.py:270
+msgid "Book series (marketed as a group)"
+msgstr "Knižní série (označováno taky jako skupina)"
+
+#: config.py:271
+msgid ""
+"If the information about the book will contain info about the book series\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Pokud informace o knize obsahují knižní sérii\n"
+"- bude přidána na konec komentáře."
+
+#: config.py:274
+msgid "Genre be appended at the end of the comment."
+msgstr "Žánry (Kategorie) budou přidány na konec komentáře."
+
+#: config.py:276
+msgid ""
+"If the information about the book will contain the keywords\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Pokud informace o knize obsahují klíčová slova\n"
+"- budou přidána na konec komentáře."
+
+#: config.py:278
+msgid "Rating"
+msgstr "Hodnocení"
+
+#: config.py:279
+msgid "Append rating at the end of the comment."
+msgstr "Přidá hodnocení na konec komentáře."
+
+#: config.py:280
+msgid "Rating Count"
+msgstr "Počet hodnocení"
+
+#: config.py:281
+msgid "Append rating count at the end of the comment."
+msgstr "Přidá počet hodnocení na konec komentáře."
+
+#: config.py:282
+msgid "ID"
+msgstr "ID"
+
+#: config.py:283
+msgid "Append ID at the end of the comment."
+msgstr "Přidá ID na konec komentáře."
+
+#~ msgid "Current edition:"
+#~ msgstr "Aktuální vydání:"
+
+#~ msgid "Select other edition"
+#~ msgstr "Vybrat jiné vydání"
+
+#~ msgid "Cancel"
+#~ msgstr "Zrušit"
+
+#~ msgid "Select edition"
+#~ msgstr "Vybrat vydání"
+
+#~ msgid "Dark theme"
+#~ msgstr "Tmavý režim"
+
+#~ msgid "Enable dark theme for additional dialog boxes."
+#~ msgstr "Povolí tmavý režim pro vyskakovací dialogová okna."
+
+#~ msgid "The maximum number of other editions to choose from (1 = fastest):"
+#~ msgstr ""
+#~ "Maximální počet jiných vydání, ze kterých si můžete vybírat (1 = "
+#~ "nejrychlejší):"
+
+#~ msgid "Specify how many other editions to choose from."
+#~ msgstr "Zvolte z kolika jiných vydání si budete vybírat."
+
+#~ msgid ""
+#~ "If there is an LC identifier in the metadata, suggest other book editions"
+#~ msgstr "Pokud je LC identifikátor v metadatech, navrhne jiná vydání knihy"
+
+#~ msgid "An experimental option"
+#~ msgstr "Experimentální funkce"

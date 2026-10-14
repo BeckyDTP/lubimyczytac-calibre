@@ -1,0 +1,26 @@
+name: Propozycja funkcji
+description: Zaproponuj usprawnienie wtyczki.
+title: "[Propozycja] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Jaki problem rozwiązuje propozycja?
+      description: Opisz obecną trudność lub ograniczenie.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proponowane rozwiązanie
+      description: Opisz oczekiwane działanie.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Rozważane alternatywy
+      description: Opcjonalnie opisz inne rozwiązania.
+    validations:
+      required: false

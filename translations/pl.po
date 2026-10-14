@@ -1,0 +1,342 @@
+# Lubimyczytac plugin translation file
+# Copyright (C) 2017-2026 Becky
+# This file is distributed under the same license as the Lubimyczytac plugin package.
+# Becky <becky@fr.pl>, 2017-2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Lubimyczytac plugin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-14 02:04+0200\n"
+"PO-Revision-Date: 2026-10-14 02:05+0200\n"
+"Last-Translator: Becky <becky@fr.pl>\n"
+"Language-Team: \n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.4.3\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
+"|| n%100>=20) ? 1 : 2);\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SearchPath-0: config.py\n"
+"X-Poedit-SearchPath-1: worker.py\n"
+"X-Poedit-SearchPath-2: __init__.py\n"
+
+#: __init__.py:103 __init__.py:361
+msgid "Unknown"
+msgstr "Nieznany"
+
+#: __init__.py:247
+msgid "Download book metadata and covers from LubimyCzytac.pl"
+msgstr "Pobieranie danych o książce oraz okładek z serwisu LubimyCzytac.pl"
+
+#: __init__.py:274
+msgid "Calibre"
+msgstr "Wersja calibre"
+
+#: __init__.py:275
+msgid "Plugin version"
+msgstr "Wersja wtyczki"
+
+#: __init__.py:275
+msgid ""
+"Please report bugs through the <a href=\"https://www.mobileread.com/forums/"
+"showthread.php?t=282922\">MobileRead</a> forum."
+msgstr ""
+"Błędy proszę zgłaszać przez forum <a href=\"https://www.mobileread.com/"
+"forums/showthread.php?t=282922\">MobileRead</a>."
+
+#: config.py:136
+msgid "Other options"
+msgstr "Inne opcje"
+
+#: config.py:141
+msgid "Maximum title/author search matches to evaluate (1 = fastest):"
+msgstr ""
+"Maksymalna liczba wyszukiwanych zgodności tytuł/autor (1 = najszybciej):"
+
+#: config.py:142
+msgid ""
+"Increasing this value will take effect when doing\n"
+"title/author searches to consider more matches.\n"
+"\n"
+"This will increase the potential likelihood of not missing result\n"
+"although it does not guaranteed."
+msgstr ""
+"Zwiększenie tej wartości powoduje, że podczas działania wtyczki\n"
+"rozważana jest większa liczba wyszukiwań zgodności tytuł/autor.\n"
+"\n"
+"Choć zwiększa to prawdopodobieństwo potencjalnego wyniku,\n"
+"wcale go nie gwarantuje."
+
+#: config.py:146
+msgid "LC website has search engine issues"
+msgstr "Strona LC ma problemy z wyszukiwarką"
+
+#: config.py:147
+msgid ""
+"You can check this box when there are issues with the internal search engine "
+"on the LC site\n"
+"(of course, the problem may be of a different nature)."
+msgstr ""
+"Można zaznaczyć to pole, gdy występują problemy z wewnętrzną wyszukiwarką na "
+"stronie LC\n"
+"(oczywiście problem może być innej natury)."
+
+#: config.py:149
+msgid "Append to Tags field in the Metadata:"
+msgstr "Do pola Etykiety w metadanych dodaj:"
+
+#: config.py:150
+msgid "The genre or the keywords taken from LC will be appended as tags."
+msgstr "Jako etykiety zostanie dopisana kategoria lub słowa kluczowe."
+
+#: config.py:151
+msgid "Download the ISBN number from the LC"
+msgstr "Pobierz numer ISBN"
+
+#: config.py:152
+msgid ""
+"Replace the ISBN number when downloaded from the LC.\n"
+"If unchecked – leave the existing number unchanged."
+msgstr ""
+"Włączenie pobierania numeru ISBN z serwisu LC.\n"
+"Jeśli odznaczone – pozostawia ewentualny istniejący numer."
+
+#: config.py:154
+msgid "Fast matching (the first one found that matches the title and author)"
+msgstr "Szybkie dopasowanie (pierwszy wynik z pasującym tytułem i autorem)"
+
+#: config.py:155
+msgid "This is a not perfect solution."
+msgstr "To nie jest idealne rozwiązanie."
+
+#: config.py:156
+msgid "Prefer matching ISBN"
+msgstr "Preferuj zgodność z numerem ISBN"
+
+#: config.py:157
+msgid ""
+"When an ISBN is supplied, check other editions and prefer an exact ISBN "
+"match.\n"
+"This may require additional requests to LubimyCzytac.pl."
+msgstr ""
+"Gdy istnieje numer ISBN wtyczka sprawdzi inne wydania i wybierze to, którego "
+"numer ISBN dokładnie się zgadza.\n"
+"Może to wymagać wysłania dodatkowych zapytań do serwisu LubimyCzytac.pl."
+
+#: config.py:181 config.py:273
+msgid "Genre (Kategoria)"
+msgstr "Kategorię"
+
+#: config.py:181 config.py:275
+msgid "Keywords"
+msgstr "Słowa kluczowe"
+
+#: config.py:189
+msgid "Append at the beginning of the comment"
+msgstr "Dołącz na początku komentarza"
+
+#: config.py:195
+msgid "Inform me of existing editions"
+msgstr "Informację o istnieniu innych wydań"
+
+#: config.py:196
+msgid "If other editions exist - inform about it."
+msgstr "Jeśli istnieją inne wydania – dodaj informację o tym."
+
+#: config.py:197
+msgid "Full list of the other editions"
+msgstr "Pełną listę innych wydań"
+
+#: config.py:198
+msgid "If other editions exist - list them all."
+msgstr "Jeśli istnieją inne wydania – wylistuj je wszystkie."
+
+#: config.py:199
+msgid "Short list of the other editions"
+msgstr "Krótką listę innych wydań"
+
+#: config.py:200
+msgid "List of the other editions (without links)."
+msgstr "Dodaj krótką listę innych wydań (bez powtórzeń i bez linków)."
+
+#: config.py:201
+msgid "Add horizontal line before the comment"
+msgstr "Przed komentarzem wstaw poziomą linię"
+
+#: config.py:202
+msgid "If other editions exist - add horizontal line before the comment."
+msgstr "Jeśli istnieją inne wydania – przed komentarzem dodaj poziomą linię."
+
+#: config.py:215 config.py:221
+msgid "The date of the first publication"
+msgstr "Data pierwszego wydania"
+
+#: config.py:222
+msgid ""
+"If the information about the book will contain\n"
+"the date of the first publication\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Jeśli w danych o książce będzie data pierwszego wydania\n"
+"– dołącz ją na końcu komentarza."
+
+#: config.py:225
+msgid "The date of the first publication in Poland"
+msgstr "Data pierwszego polskiego wydania"
+
+#: config.py:226
+msgid ""
+"If the information about the book will contain\n"
+"the date of the first publication in Poland\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Jeśli w danych o książce będzie data pierwszego polskiego\n"
+"wydania – dołącz ją na końcu komentarza."
+
+#: config.py:237
+msgid "Reverse order in the author(s) field"
+msgstr "Odwrócona kolejność w polu autorów"
+
+#: config.py:243
+msgid "Last Name First Name in authors"
+msgstr "W polu autorów stosuję zapis Nazwisko Imię"
+
+#: config.py:244
+msgid ""
+"For users who prefer a surname before the first name in author metadata."
+msgstr ""
+"Dla użytkowników, którzy w metadanych dotyczących autorów preferują nazwisko "
+"występujące przed imieniem."
+
+#: config.py:253
+msgid "Append at the end of the comment"
+msgstr "Dołącz na końcu komentarza"
+
+#: config.py:258
+msgid "Number of pages"
+msgstr "Liczbę stron"
+
+#: config.py:259
+msgid ""
+"If the information about the book will contain the number of pages\n"
+"- it will be appended at the end of the comment.\n"
+"Form: Książka ma 123 strony."
+msgstr ""
+"Jeśli w danych o książce będzie też liczba stron\n"
+"– dołącz ją na końcu komentarza.\n"
+"Forma: Książka ma 123 strony."
+
+#: config.py:262
+msgid "Simplified form"
+msgstr "Forma uproszczona"
+
+#: config.py:263
+msgid "Use form: Liczba stron w książce: 123"
+msgstr "Forma: Liczba stron w książce: 123"
+
+#: config.py:264
+msgid "Original title"
+msgstr "Tytuł oryginalny"
+
+#: config.py:265
+msgid ""
+"If the information about the book will contain the original title\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Jeśli w danych o książce będzie też tytuł oryginalny\n"
+"– dołącz go na końcu komentarza."
+
+#: config.py:267
+msgid "Translator(s)"
+msgstr "Tłumaczy"
+
+#: config.py:268
+msgid ""
+"If the information about the book will contain info about translators\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Jeśli w danych o książce będzie też informacja o tłumaczach\n"
+"– dołącz ją na końcu komentarza."
+
+#: config.py:270
+msgid "Book series (marketed as a group)"
+msgstr "Serię wydawniczą (nie cykl)"
+
+#: config.py:271
+msgid ""
+"If the information about the book will contain info about the book series\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Jeśli w danych o książce będzie też informacja o serii wydawniczej\n"
+"– dołącz ją na końcu komentarza."
+
+#: config.py:274
+msgid "Genre be appended at the end of the comment."
+msgstr "Na końcu komentarza dodaj kategorię."
+
+#: config.py:276
+msgid ""
+"If the information about the book will contain the keywords\n"
+"- it will be appended at the end of the comment."
+msgstr ""
+"Jeśli w danych o książce będą też słowa kluczowe\n"
+"– dołącz je na końcu komentarza."
+
+#: config.py:278
+msgid "Rating"
+msgstr "Ocenę"
+
+#: config.py:279
+msgid "Append rating at the end of the comment."
+msgstr "Dołącz na końcu komentarza ocenę z serwisu LubimyCzytac."
+
+#: config.py:280
+msgid "Rating Count"
+msgstr "Liczbę ocen"
+
+#: config.py:281
+msgid "Append rating count at the end of the comment."
+msgstr "Dołącz na końcu komentarza liczbę ocen z serwisu LubimyCzytac."
+
+#: config.py:282
+msgid "ID"
+msgstr "ID"
+
+#: config.py:283
+msgid "Append ID at the end of the comment."
+msgstr "Dołącz na końcu komentarza ID z serwisu LubimyCzytac."
+
+#~ msgid "Current edition:"
+#~ msgstr "Aktualne wydanie:"
+
+#~ msgid "Select other edition"
+#~ msgstr "Wybierz inne wydanie"
+
+#~ msgid "Cancel"
+#~ msgstr "Anuluj"
+
+#~ msgid "Select edition"
+#~ msgstr "Wybierz wydanie"
+
+#~ msgid "Dark theme"
+#~ msgstr "Ciemny motyw"
+
+#~ msgid "Enable dark theme for additional dialog boxes."
+#~ msgstr "Włącz ciemny motyw dla dodatkowych okienek."
+
+#~ msgid "The maximum number of other editions to choose from (1 = fastest):"
+#~ msgstr "Maksymalna liczba innych wydań do wyboru (1 = najszybciej):"
+
+#~ msgid "Specify how many other editions to choose from."
+#~ msgstr "Określ z ilu innych wydań będziesz dokonywał wyboru."
+
+#~ msgid ""
+#~ "If there is an LC identifier in the metadata, suggest other book editions"
+#~ msgstr ""
+#~ "Jeśli w metadanych istnieje identyfikator LC, sugeruj inne wydania książki"
+
+#~ msgid "An experimental option"
+#~ msgstr "Opcja eksperymentalna, ale powinna działać poprawnie"
