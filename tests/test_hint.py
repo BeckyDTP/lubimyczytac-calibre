@@ -76,6 +76,31 @@ class ManualSearchHintTests(unittest.TestCase):
         results, log = run_identify('single', True, title='', authors=('Sophie Hannah',))
         self.assertEqual(results, [])
 
+    def test_debug_file_log(self):
+        # LUBIMYCZYTAC_DEBUG=1: kazdy wpis logu trafia tez do pliku plugins/lubimyczytac-debug.log
+        import tempfile, shutil
+        from calibre import constants as stub_constants
+        tmp = tempfile.mkdtemp()
+        os.makedirs(os.path.join(tmp, 'plugins'))
+        saved_dir, saved_env = stub_constants.config_dir, os.environ.get('LUBIMYCZYTAC_DEBUG')
+        lc_new.config_dir = tmp
+        os.environ['LUBIMYCZYTAC_DEBUG'] = '1'
+        try:
+            results, log = run_identify('single', False)
+            path = os.path.join(tmp, 'plugins', 'lubimyczytac-debug.log')
+            self.assertTrue(os.path.isfile(path))
+            text = io.open(path, encoding='utf-8').read()
+            self.assertIn('identify: ', text)
+            self.assertIn('tryb pobierania: single', text)
+            self.assertIn('No matches found', text)
+        finally:
+            lc_new.config_dir = saved_dir
+            if saved_env is None:
+                del os.environ['LUBIMYCZYTAC_DEBUG']
+            else:
+                os.environ['LUBIMYCZYTAC_DEBUG'] = saved_env
+            shutil.rmtree(tmp, ignore_errors=True)
+
     def test_mode_is_logged(self):
         results, log = run_identify('single', False)
         self.assertTrue(any(re.match(r'BECKY INFO: tryb pobierania: single$', l) for _, l in log.lines))

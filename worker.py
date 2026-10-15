@@ -33,6 +33,7 @@ from six import text_type as unicode
 
 import os
 import socket
+import time
 import re
 import datetime
 import json
@@ -71,6 +72,13 @@ frazastrona = ["strona", "strony", "stron"]
 # Zmienną trzeba ustawić przed uruchomieniem calibre (odczyt przy imporcie modułu).
 BECKYDEBUG = os.environ.get('LUBIMYCZYTAC_DEBUG', '').strip().lower() in ('1', 'true', 'yes', 'tak')
 
+# Limity skanowania wydań przy opcji „Prefer matching ISBN”. Lista wydań nie
+# zawiera ISBN, więc każde wydanie wymaga pobrania osobnej strony (ok. 400 KB).
+# „Pan Tadeusz” ma 108 wydań – bez limitu jedno pobranie metadanych potrafiło
+# trwać kwadrans, a calibre kończyło zadanie bez pokazania logu.
+ISBN_SCAN_MAX_EDITIONS = 20   # najwyżej tyle stron wydań
+ISBN_SCAN_MAX_SECONDS = 60    # i nie dłużej niż tyle sekund łącznie
+
 
 class Worker(Thread):
 
@@ -108,6 +116,10 @@ class Worker(Thread):
         # Tytuły innych wydań odczytane w parse_inne_wydania_all(),
         # wykorzystywane ponownie przez parse_inne_wydania_short()
         self.inne_wydania_tytuly_short = None
+        # Strona pełnej listy wydań pobierana najwyżej raz na Workera
+        # (korzystają z niej skan ISBN i listy wydań w komentarzu)
+        self._editions_root = None
+        self._editions_checked = False
         # Szczegółowy rejestr prób parserów, wykorzystywany w diagnostyce
         self.parse_diagnostics = []
         self._diagnostic_attempts = {}
@@ -288,15 +300,99 @@ class Worker(Thread):
             values = root.xpath('//div[@id="book-details"]//dt[contains(text(),"ISBN:")]/following-sibling::dd[1]//text()')
         return self._normalize_isbn(' '.join(values).strip() if values else None)
 
+    def has_other_editions(self, root):
+        """
+        Czy strona książki pokazuje inne wydania: przycisk „Inne wydania”
+        (``#buttonShowOtherEditions``), blok ``#other-editions`` albo link do
+        ``/ksiazka/wydania/``. Gdy ich nie ma, książka ma jedno wydanie
+        i pobieranie listy wydań byłoby zbędnym żądaniem.
+        """
+        return bool(root.xpath('//button[@id="buttonShowOtherEditions"] | //div[@id="other-editions"] '
+                               '| //a[contains(@href, "/ksiazka/wydania/")]'))
+
+    def editions_list_url(self, root):
+        """
+        Adres pełnej listy wydań: z linku „więcej” na stronie książki (ma właściwy
+        slug), a gdy go nie ma – zbudowany z adresu książki. ``None`` dla adresu
+        niebędącego stroną książki.
+        """
+        hrefs = root.xpath('//a[contains(@href, "/ksiazka/wydania/")]/@href')
+        if hrefs:
+            href = hrefs[0]
+            return href if href.startswith('http') else 'https://lubimyczytac.pl' + href
+        match = re.search(r'/ksiazka/(\d+)(?:/([^/?#]+))?', self.url)
+        if not match:
+            return None
+        url = 'https://lubimyczytac.pl/ksiazka/wydania/' + match.group(1)
+        if match.group(2):
+            url += '/' + match.group(2)
+        return url
+
+    def fetch_editions_root(self, root):
+        """
+        Pobiera stronę pełnej listy wydań – najwyżej raz na Workera – i zwraca
+        jej drzewo HTML. ``None``, gdy strona książki nie pokazuje innych wydań
+        (bez żądania) albo pobranie się nie powiodło.
+        """
+        if self._editions_checked:
+            return self._editions_root
+        self._editions_checked = True
+        if not self.has_other_editions(root):
+            self.log.info('BECKY INFO: strona ksiazki nie pokazuje innych wydan - pomijam pobieranie listy wydan')
+            return None
+        editions_url = self.editions_list_url(root)
+        if not editions_url:
+            return None
+        try:
+            response = self.browser.open_novisit(editions_url, timeout=self.timeout)
+            raw = response.read().strip()
+            if not isinstance(raw, unicode):
+                raw = raw.decode('utf-8', errors='replace')
+            self._editions_root = fromstring(clean_ascii_chars(raw.encode('utf-8')))
+            self.log.info('BECKY INFO: Pobrano strone pelnej listy wydan: %s' % editions_url)
+        except Exception as e:
+            self.log.warning('BECKY INFO: Nie udalo sie pobrac pelnej listy wydan: %s' % e)
+        return self._editions_root
+
+    def edition_links(self, editions_root):
+        """Lista ``(adres, tytuł)`` z pełnej listy wydań, bez powtórzeń, w kolejności LC."""
+        links = []
+        seen = set()
+        if editions_root is None:
+            return links
+        for node in editions_root.xpath(
+                '//div[@id="editionsList"]//a[contains(concat(" ", normalize-space(@class), " "), " book-card__title ")]'):
+            href = node.get('href')
+            title = normalize_edition_title(''.join(node.itertext()))
+            if not href or not title:
+                continue
+            if href.startswith('/'):
+                href = 'https://lubimyczytac.pl' + href
+            if href not in seen:
+                seen.add(href)
+                links.append((href, title))
+        return links
+
     def find_edition_by_isbn(self, root):
         """
         Znajduje wydanie książki o ISBN zgodnym z ISBN z calibre (opcja
         „Prefer matching ISBN”).
 
-        Pobiera listę wydań (``/ksiazka/wydania/<ID>``), a następnie strony
-        kolejnych wydań – aż do pierwszej dokładnej zgodności. Pomija
-        audiobooki i pierwotnego kandydata. Zwraca krotkę ``(url, root)``
-        zgodnego wydania albo ``None`` (wtedy pozostaje pierwotny wynik).
+        Lista wydań nie zawiera numerów ISBN, więc trzeba pobierać strony
+        kolejnych wydań – aż do pierwszej dokładnej zgodności. Żeby nie
+        zamieniało się to w kwadrans przy książkach o stu wydaniach:
+
+        * strona listy jest pobierana tylko wtedy, gdy strona książki pokazuje
+          inne wydania (``fetch_editions_root``), i tylko raz na Workera;
+        * pomijamy audiobooki i pierwotnego kandydata;
+        * najpierw sprawdzamy wydania o tym samym tytule co pierwotny kandydat
+          (wydanie użytkownika rzadko ma inny tytuł niż to, które pasowało
+          do calibre), potem pozostałe;
+        * skan kończy się po ``ISBN_SCAN_MAX_EDITIONS`` stronach albo po
+          ``ISBN_SCAN_MAX_SECONDS`` sekundach – wtedy pozostaje pierwotny wynik,
+          a w logu jest informacja, ile wydań nie zostało sprawdzonych.
+
+        Zwraca krotkę ``(url, root)`` zgodnego wydania albo ``None``.
         """
         target = self._normalize_isbn(self.target_isbn)
         if not target:
@@ -309,39 +405,45 @@ class Worker(Thread):
             self.log.info('ISBN-EDITION: pierwotny wynik ma zgodny ISBN; pomijam szczegolowe sprawdzanie innych wydan')
             return None
 
-        match = re.search(r'/ksiazka/(\d+)(?:/([^/?#]+))?', self.url)
-        if not match:
-            self.log.info('ISBN-EDITION: URL nie jest strona ksiazki; pomijam wyszukiwanie wydan')
+        editions_root = self.fetch_editions_root(root)
+        if editions_root is None:
+            self.log.info('ISBN-EDITION: brak listy wydan; pozostaje pierwotne wydanie')
             return None
-        editions_url = 'https://lubimyczytac.pl/ksiazka/wydania/' + match.group(1)
-        if match.group(2):
-            editions_url += '/' + match.group(2)
-        self.log.info('ISBN-EDITION: pobieram liste: %s' % editions_url)
-        response = self.browser.open_novisit(editions_url, timeout=self.timeout)
-        raw = response.read().strip()
-        if not isinstance(raw, unicode):
-            raw = raw.decode('utf-8', errors='replace')
-        editions_root = fromstring(clean_ascii_chars(raw.encode('utf-8')))
-        nodes = editions_root.xpath('//div[@id="editionsList"]//a[contains(concat(" ", normalize-space(@class), " "), " book-card__title ")]')
-        self.log.info('ISBN-EDITION: liczba pozycji na liscie: %d' % len(nodes))
-        seen = set()
-        for node in nodes:
-            href = node.get('href')
-            title = ' '.join(''.join(node.itertext()).split())
-            if not href:
-                continue
-            if href.startswith('/'):
-                href = 'https://lubimyczytac.pl' + href
+
+        candidates = []
+        for href, title in self.edition_links(editions_root):
             # Wydanie ma być książką, nie audiobookiem
             if '/ksiazka/' not in href:
                 self.log.info('ISBN-EDITION: pomijam nie-ksiazkowa pozycje: %s' % href)
                 continue
-            if href in seen:
-                continue
-            seen.add(href)
             # Nie pobieramy ponownie strony pierwotnego kandydata
             if href.rstrip('/') == self.url.rstrip('/'):
                 continue
+            candidates.append((href, title))
+        self.log.info('ISBN-EDITION: liczba wydan do sprawdzenia: %d' % len(candidates))
+
+        # Najpierw wydania o tytule identycznym z tytułem pierwotnego kandydata
+        try:
+            main_title = strip_accents(normalize_edition_title(self.parse_title(root))).lower()
+        except Exception:
+            main_title = ''
+        if main_title:
+            same = [c for c in candidates if strip_accents(c[1]).lower() == main_title]
+            other = [c for c in candidates if strip_accents(c[1]).lower() != main_title]
+            candidates = same + other
+
+        started = time.time()
+        checked = 0
+        for href, title in candidates:
+            if checked >= ISBN_SCAN_MAX_EDITIONS:
+                self.log.info('ISBN-EDITION: limit %d stron wydan osiagniety; %d wydan nie sprawdzono'
+                              % (ISBN_SCAN_MAX_EDITIONS, len(candidates) - checked))
+                break
+            if time.time() - started > ISBN_SCAN_MAX_SECONDS:
+                self.log.info('ISBN-EDITION: limit czasu %d s osiagniety po %d stronach; %d wydan nie sprawdzono'
+                              % (ISBN_SCAN_MAX_SECONDS, checked, len(candidates) - checked))
+                break
+            checked += 1
             try:
                 detail_response = self.browser.open_novisit(href, timeout=self.timeout)
                 detail_raw = detail_response.read().strip()
@@ -526,19 +628,25 @@ class Worker(Thread):
         except:
             self.log.exception('Error parsing other editions for url: %r'%self.url)
 
-        try:
-            inne_wydania_lista = self.parse_inne_wydania_all(root)
-            if inne_wydania_lista:
-                self.log.info('BECKY INFO: Pelna lista innych wydan\n%s-----'%strip_accents(inne_wydania_lista))
-        except:
-            self.log.exception('Error parsing list of other editions for url: %r'%self.url)
+        # Listy wydań wymagają pobrania osobnej strony, więc budujemy je tylko
+        # wtedy, gdy któraś z opcji list jest włączona (do 2.4.1 – zawsze,
+        # czyli jedno zbędne żądanie na każdego kandydata). Lista skrócona
+        # korzysta z tytułów odczytanych przez listę pełną.
+        if before_other_editions_all == 1 or before_other_editions_short == 1:
+            try:
+                inne_wydania_lista = self.parse_inne_wydania_all(root)
+                if inne_wydania_lista:
+                    self.log.info('BECKY INFO: Pelna lista innych wydan\n%s-----'%strip_accents(inne_wydania_lista))
+            except:
+                self.log.exception('Error parsing list of other editions for url: %r'%self.url)
 
-        try:
-            inne_wydania_short_lista = self.parse_inne_wydania_short(root)
-            if inne_wydania_short_lista:
-                self.log.info('BECKY INFO: Krotka lista innych wydan\n%s-----'%strip_accents(inne_wydania_short_lista).replace('•',  '*'))
-        except:
-            self.log.exception('Error parsing list of other editions for url: %r'%self.url)
+        if before_other_editions_short == 1:
+            try:
+                inne_wydania_short_lista = self.parse_inne_wydania_short(root)
+                if inne_wydania_short_lista:
+                    self.log.info('BECKY INFO: Krotka lista innych wydan\n%s-----'%strip_accents(inne_wydania_short_lista).replace('•',  '*'))
+            except:
+                self.log.exception('Error parsing list of other editions for url: %r'%self.url)
 
         try:
             tags = self.parse_tags(root)
@@ -1266,38 +1374,14 @@ class Worker(Thread):
         Pełna lista innych wydań jako akapit HTML z odsyłaczami
         (``<p id="lista-innych-wydan">``). ``None``, gdy brak innych wydań.
 
-        Pełna lista znajduje się na osobnej stronie ``/ksiazka/wydania/<ID>/<slug>``.
-        Jeśli jej pobranie się nie powiedzie, korzystamy ze skróconej listy
+        Pełna lista znajduje się na osobnej stronie ``/ksiazka/wydania/<ID>/<slug>``,
+        pobieranej przez ``fetch_editions_root`` (tylko gdy strona książki pokazuje
+        inne wydania, najwyżej raz na Workera – tę samą stronę wykorzystuje skan
+        ISBN). Jeśli jej pobranie się nie powiedzie, korzystamy ze skróconej listy
         osadzonej na stronie książki (``#other-editions``). Odczytane tytuły
         zapamiętujemy w ``self.inne_wydania_tytuly_short`` dla ``parse_inne_wydania_short``.
         """
-        editions_root = None
-        match = re.search(r'/ksiazka/(\d+)(?:/([^/?#]+))?', self.url)
-        if match:
-            editions_url = 'https://lubimyczytac.pl/ksiazka/wydania/' + match.group(1)
-            if match.group(2):
-                editions_url += '/' + match.group(2)
-            try:
-                response = self.browser.open_novisit(editions_url, timeout=self.timeout)
-                editions_raw = response.read().strip()
-                if not isinstance(editions_raw, unicode):
-                    editions_raw = editions_raw.decode('utf-8', errors='replace')
-                editions_root = fromstring(clean_ascii_chars(editions_raw.encode('utf-8')))
-                self.log.info('BECKY INFO: Pobrano strone pelnej listy wydan: %s' % editions_url)
-            except Exception as e:
-                self.log.warning('BECKY INFO: Nie udalo sie pobrac pelnej listy wydan: %s' % e)
-
-        edition_links = []
-        if editions_root is not None:
-            for node in editions_root.xpath(
-                    '//div[@id="editionsList"]//a[contains(concat(" ", normalize-space(@class), " "), " book-card__title ")]'):
-                href = node.get('href')
-                title = normalize_edition_title(''.join(node.itertext()))
-                if href and title:
-                    if href.startswith('/'):
-                        href = 'https://lubimyczytac.pl' + href
-                    if href not in [item[0] for item in edition_links]:
-                        edition_links.append((href, title))
+        edition_links = self.edition_links(self.fetch_editions_root(root))
 
         # Ścieżka awaryjna na wypadek zmian po stronie serwisu lub problemów z połączeniem
         if not edition_links:

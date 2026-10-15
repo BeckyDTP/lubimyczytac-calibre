@@ -16,7 +16,9 @@ Zapis pomysłów, które nie weszły do 2.4.0. Każdy ma opis problemu, propozyc
 
 **Problem.** `find_edition_by_isbn` pobiera strony wydań po kolei i kończy na pierwszym trafieniu. „Wszystko czerwone” Chmielewskiej ma 14 wydań; właściwe było dwunaste – całe pobranie trwało 7,3 s.
 
-**Propozycja.** Niewielka pula wątków (3–4) pobierająca strony wydań równolegle, z przerwaniem reszty po pierwszym dokładnym trafieniu. Limit równoczesnych żądań zostawić mały, żeby nie obciążać LC i nie prowokować błędów 500/503, które serwis zwraca pod obciążeniem.
+**Propozycja.** Niewielka pula wątków (3–4) pobierająca strony wydań równolegle, z przerwaniem reszty po pierwszym dokładnym trafieniu. Limit równoczesnych żądań zostawić mały, żeby nie obciążać LC i nie prowokować błędów 500/503, które serwis zwraca pod obciążeniem. Uwaga: Workery kandydatów już działają równolegle (do 4), więc pula w każdym z nich dałaby do 16 jednoczesnych połączeń – pula powinna być wspólna dla wszystkich Workerów albo skan ISBN ograniczony do pierwszego kandydata.
+
+**Stan po 2.4.2.** Skan ma limity (20 stron / 60 s, stałe `ISBN_SCAN_MAX_EDITIONS` i `ISBN_SCAN_MAX_SECONDS` w `worker.py`) i kolejność „najpierw ten sam tytuł”; lista wydań jest pobierana raz i tylko wtedy, gdy strona książki pokazuje inne wydania. Jeśli limity okażą się za ciasne („Wszystko czerwone”: 14 wydań, właściwe było 12.), można je wynieść do konfiguracji.
 
 **Gdzie.** `worker.py`, `find_edition_by_isbn`. Ze względu na zgodność z calibre 3.48 (Python 2) nie ma `concurrent.futures` – użyć `threading.Thread` + `queue.Queue`, tak jak robi to już `identify()` z Workerami.
 

@@ -33,7 +33,7 @@ __docformat__ = 'restructuredtext en'
 # tekstowa postać (PLUGIN_VERSION w klasie LubimyCzytac) jest wyliczana z tej krotki.
 PLUGINVER = (2, 4, 2)
 
-import sys, time, re, threading
+import sys, os, io, time, re, threading, traceback
 
 try:
     from urllib.parse import quote
@@ -56,6 +56,10 @@ from calibre.utils.cleantext import clean_ascii_chars
 from calibre.utils.localization import get_udc
 from calibre.constants import numeric_version
 from calibre.constants import DEBUG
+try:
+    from calibre.constants import config_dir
+except ImportError:
+    config_dir = None
 
 from functools import total_ordering
 from polyglot.builtins import cmp
@@ -106,6 +110,76 @@ def cleanup_title(s):
     s = trailing_paren_pat.sub('', s)
     s = whitespace_pat.sub(' ', s)
     return s.strip()
+
+
+class DebugFileLog(object):
+    """
+    Owijka logu calibre: każdy wpis trafia dodatkowo do pliku. Włączana
+    zmienną środowiskową ``LUBIMYCZYTAC_DEBUG`` (tą samą, która włącza raport
+    parserów), bo gdy calibre przerywa zbyt długie pobieranie, okno dziennika
+    bywa niedostępne – a plik zostaje. Plik: ``plugins/lubimyczytac-debug.log``
+    w katalogu konfiguracji calibre, dopisywany; po przekroczeniu 5 MB
+    zaczynany od nowa. Metody logu calibre są przekazywane dalej bez zmian,
+    więc owijka jest przezroczysta dla reszty kodu (także dla Workerów).
+    Błędy zapisu są ignorowane – diagnostyka nie może zepsuć pobierania.
+    """
+    MAX_SIZE = 5 * 1024 * 1024
+
+    def __init__(self, log, path):
+        self._log = log
+        self._path = path
+        self._lock = threading.Lock()
+        try:
+            if os.path.getsize(path) > self.MAX_SIZE:
+                with io.open(path, 'w', encoding='utf-8') as fh:
+                    fh.write(u'(plik zaczety od nowa po przekroczeniu %d MB)\n' % (self.MAX_SIZE // (1024 * 1024)))
+        except Exception:
+            pass
+
+    def _write(self, level, args):
+        try:
+            text = u' '.join(as_unicode(a) for a in args)
+            with self._lock:
+                with io.open(self._path, 'a', encoding='utf-8') as fh:
+                    fh.write(u'%s %-5s %s\n' % (time.strftime('%H:%M:%S'), level, text))
+        except Exception:
+            pass
+
+    def info(self, *args, **kwargs):
+        self._write('INFO', args)
+        return self._log.info(*args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        self._write('DEBUG', args)
+        return self._log.debug(*args, **kwargs)
+
+    def warn(self, *args, **kwargs):
+        self._write('WARN', args)
+        return getattr(self._log, 'warn', self._log.info)(*args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        self._write('WARN', args)
+        return getattr(self._log, 'warning', getattr(self._log, 'warn', self._log.info))(*args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        self._write('ERROR', args)
+        return self._log.error(*args, **kwargs)
+
+    def exception(self, *args, **kwargs):
+        self._write('EXC', args + (traceback.format_exc(),))
+        return self._log.exception(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._log, name)
+
+
+def debug_log_path():
+    """Ścieżka pliku dziennika diagnostycznego albo ``None``, gdy diagnostyka jest wyłączona."""
+    if os.environ.get('LUBIMYCZYTAC_DEBUG', '').strip().lower() not in ('1', 'true', 'yes', 'tak'):
+        return None
+    if not config_dir:
+        return None
+    return os.path.join(config_dir, 'plugins', 'lubimyczytac-debug.log')
 
 
 def detect_download_mode():
@@ -569,6 +643,14 @@ class LubimyCzytac(Source):
         więc ``_filter_results_by_authors`` może odrzucić kandydatów bez
         zgodnego autora, zanim wyniki trafią do calibre.
         """
+        # Diagnostyka do pliku (LUBIMYCZYTAC_DEBUG): log zostaje, nawet gdy calibre
+        # przerwie pobieranie i nie pokaże dziennika
+        debug_path = debug_log_path()
+        if debug_path:
+            log = DebugFileLog(log, debug_path)
+            log.info('===== %s | identify: %r / %r' % (time.strftime('%Y-%m-%d %H:%M:%S'), title, authors))
+            log.info('BECKY INFO: dziennik diagnostyczny zapisywany do pliku: %s' % debug_path)
+
         log.info('--- START ---')
         matches = []
         lubimy_czytac_id = identifiers.get(self.ID_NAME, None)
@@ -768,8 +850,8 @@ class LubimyCzytac(Source):
         web_query = q('site:lubimyczytac.pl ' + phrase)
         lc_query = q(('%s %s' % (title, author)).strip())
         parts = [
-            '<p><span style="color:red; font-weight:bold;">%s</span> %s</p>' % (
-                html_escape(_('WARNING: LubimyCzytac did not find this book.')),
+            '<p><span style="color:red; font-weight:bold;">%s</span><br>%s</p>' % (
+                html_escape(_('WARNING: The LubimyCzytac plugin did not find this book.')),
                 html_escape(_('This entry is not book metadata - do not apply it.'))),
             '<p>%s</p>' % html_escape(_('The LubimyCzytac search engine knows only the main edition of each book. '
                                         'An edition published under a different title can usually be found with a web search:')),

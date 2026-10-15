@@ -41,7 +41,7 @@ Po instalacji ustawienia są dostępne w sekcji wtyczek źródeł metadanych. W�
 - tryb szybkiego dopasowania;
 - sposób dodawania gatunku lub słów kluczowych do etykiet;
 - zastępowanie istniejącego ISBN;
-- preferowanie wydania z dokładnie pasującym ISBN – opcja domyślnie wyłączona;
+- preferowanie wydania z dokładnie pasującym ISBN – opcja domyślnie wyłączona; lista wydań nie zawiera numerów ISBN, więc każde sprawdzane wydanie to osobne żądanie – wtyczka sprawdza najpierw wydania o tym samym tytule i kończy po 20 stronach albo 60 sekundach, zostawiając pierwotny wynik;
 - obsługa sytuacji, w których wewnętrzna wyszukiwarka serwisu działa nieprawidłowo;
 - podpowiedź ręcznego wyszukania, gdy LubimyCzytać nie zna tytułu (wirtualny wynik z linkami; tylko w oknie pojedynczego pobierania) – opcja domyślnie wyłączona;
 - wybór dodatkowych informacji dołączanych do opisu, w tym informacji o innych wydaniach.
@@ -94,6 +94,8 @@ calibre-debug -g
 # Linux / macOS
 LUBIMYCZYTAC_DEBUG=1 calibre-debug -g
 ```
+
+Przy ustawionej zmiennej `LUBIMYCZYTAC_DEBUG=1` cały dziennik pobierania jest dodatkowo dopisywany do pliku `plugins/lubimyczytac-debug.log` w katalogu konfiguracji calibre (Preferencje → Różne → „Otwórz katalog konfiguracji calibre”). Przydaje się, gdy calibre przerwie zbyt długie pobieranie i nie pokaże dziennika; po przekroczeniu 5 MB plik jest zaczynany od nowa.
 
 Komunikaty logu są celowo pisane bez polskich znaków diakrytycznych, żeby czytały się tak samo w każdej konsoli i dało się je bez obaw wklejać do zgłoszeń.
 
