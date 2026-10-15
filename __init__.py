@@ -31,7 +31,7 @@ __docformat__ = 'restructuredtext en'
 
 # Numer wersji wtyczki (krotka wymagana przez calibre). Zmieniamy go tylko tutaj –
 # tekstowa postać (PLUGIN_VERSION w klasie LubimyCzytac) jest wyliczana z tej krotki.
-PLUGINVER = (2, 4, 2)
+PLUGINVER = (2, 4, 3)
 
 # Limit czasu całego identify() w sekundach. Calibre kończy proces roboczy
 # pobierania metadanych po własnym limicie (domyślnie 300 s) i wtedy ginie
@@ -764,13 +764,18 @@ class LubimyCzytac(Source):
             log.info('BECKY INFO: matches UNIQUE: %d'% len(matches))
 
         log.debug('BECKY: Starting workers for:\n%s' % ('\n'.join(matches,)))
-        log.debug('BECKY: Przed workers')
         # Opcja „Prefer matching ISBN”: Worker sprawdzi inne wydania kandydata
-        # i wybierze to o identycznym ISBN jak w calibre
+        # i wybierze to o identycznym ISBN jak w calibre. Jawnie podany
+        # identyfikator LC (ręcznie, przyciskiem schowka albo wtyczką „Zmień
+        # wydanie LC”) ma pierwszeństwo: bez tego wyjątku stary ISBN w calibre
+        # cofałby wybór użytkownika do wydania z tym ISBN.
         prefer_isbn_match = cfg.plugin_prefs[cfg.STORE_NAME].get(
             cfg.PREFER_ISBN_MATCH, cfg.DEFAULT_STORE_VALUES[cfg.PREFER_ISBN_MATCH])
         target_isbn = identifiers.get("isbn") if prefer_isbn_match else None
-        if target_isbn:
+        if target_isbn and lubimy_czytac_id:
+            log.info('ISBN-EDITION: identyfikator LC podany jawnie - pomijam wybor wydania po ISBN')
+            target_isbn = None
+        elif target_isbn:
             log.info('ISBN-EDITION: opcja Prefer matching ISBN jest wlaczona')
         # Indeks kandydata (i) staje się jego source_relevance – ostatnim
         # kryterium sortowania w MetadataCompareKeyGen. Wyniki zbieramy do
@@ -779,7 +784,6 @@ class LubimyCzytac(Source):
         collected = Queue()
         workers = [Worker(url, collected, br, log, i, self, target_isbn=target_isbn) for i, url in
                 enumerate(matches) if url]
-        log.debug('BECKY: Po workers')
 
         log.info('-------------------------------  BEDA PARSOWANE  -------------------------------')
 
@@ -882,9 +886,11 @@ class LubimyCzytac(Source):
             '<li><a href="https://lubimyczytac.pl/szukaj/ksiazki?phrase=%s">%s</a></li>' % (
                 lc_query, html_escape(_('Search on LubimyCzytac'))),
             '</ul>',
-            '<p>%s</p>' % html_escape(_('When you find the page of your edition, copy the number from its address '
-                                        '(for example 74063 from lubimyczytac.pl/ksiazka/74063/krol-pozwow), enter '
-                                        'lubimyczytac:74063 in the identifiers field of the book and download the metadata again.')),
+            '<p>%s</p>' % html_escape(_('When you find the page of your edition, copy its address from the browser '
+                                        '(for example https://lubimyczytac.pl/ksiazka/74063/krol-pozwow) and, in the '
+                                        'Edit metadata window, click the clipboard button next to the Identifiers field: '
+                                        'calibre turns the address into lubimyczytac:74063 (you can also type it by hand). '
+                                        'Then download the metadata again.')),
         ]
         return ''.join(parts)
 

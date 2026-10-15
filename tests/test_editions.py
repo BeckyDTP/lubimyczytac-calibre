@@ -177,6 +177,30 @@ class WithEditionsTests(unittest.TestCase):
         self.assertEqual(len(detail), 1, 'po przekroczeniu budzetu czasu zadna strona wydania nie jest pobierana')
         self.assertTrue(any('limit czasu' in l for _, l in log.lines))
 
+    def test_explicit_lc_id_wins_over_isbn(self):
+        # identyfikator LC podany jawnie (np. przez „Zmień wydanie LC”) + stary ISBN w calibre:
+        # bez skanu wydań wtyczka zostaje przy wskazanym wydaniu 200
+        try:
+            from queue import Queue as Q
+        except ImportError:
+            from Queue import Queue as Q
+        set_config(PREFER_ISBN_MATCH=True)
+        plugin = make_plugin()
+        plugin.browser = self.browser
+        log = FakeLog()
+        rq = Q()
+        plugin.identify(log, rq, rare_cases.Abort(), title='Pan Testeusz', authors=['Autor Testowy'],
+                        identifiers={'lubimyczytac': '200', 'isbn': '9788300000310'})
+        results = []
+        while True:
+            try:
+                results.append(rq.get_nowait())
+            except Empty:
+                break
+        self.assertEqual([mi.identifiers.get('lubimyczytac') for mi in results], ['200'])
+        self.assertEqual(requests_of(self.browser, '/wydania/'), [], 'bez skanu wydan po ISBN')
+        self.assertTrue(any('identyfikator LC podany jawnie' in l for _, l in log.lines))
+
     def test_matching_isbn_on_main_edition_needs_no_requests(self):
         results, log, w = run_worker(self.browser, '200', target_isbn='9788300000200', PREFER_ISBN_MATCH=True)
         self.assertEqual(len(self.browser.requests), 1)

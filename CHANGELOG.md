@@ -2,6 +2,12 @@
 
 Wpisy są po angielsku, bo te same notatki publikujemy w wątku wtyczki na forum MobileRead. Najnowsza wersja na górze.
 
+## Wersja 2.4.3 – 16 Oct 2026
+*Wydanie przygotowane przez Becky.*
+- Fixed: An explicitly supplied lubimyczytac identifier (typed in, pasted with the clipboard button or set by the 'Zmień wydanie LC' helper plugin) now takes precedence over 'Prefer matching ISBN'. Previously a stale ISBN left in calibre made the ISBN check switch the result back to the old edition, undoing the user's choice.
+- Changed: The manual-search hint now explains the easiest way to set the identifier: copy the address of the edition page and click the clipboard button next to the Identifiers field.
+- Changed: Two empty debug lines removed from the identify log.
+
 ## Wersja 2.4.2 – 15 Oct 2026
 *Wydanie przygotowane przez Becky.*
 - Added: The optional 'Suggest a manual search when nothing is found' setting (disabled by default). When LubimyCzytac does not know the title, the plugin adds a virtual result whose description contains links to a Google and DuckDuckGo search limited to lubimyczytac.pl, a link to the LubimyCzytac search and instructions for the lubimyczytac:<ID> identifier. Pages of editions published under another title are indexed by web search engines even though the LubimyCzytac search engine does not return them.
