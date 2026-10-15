@@ -33,6 +33,15 @@ __docformat__ = 'restructuredtext en'
 # tekstowa postać (PLUGIN_VERSION w klasie LubimyCzytac) jest wyliczana z tej krotki.
 PLUGINVER = (2, 4, 2)
 
+# Limit czasu całego identify() w sekundach. Calibre kończy proces roboczy
+# pobierania metadanych po własnym limicie (domyślnie 300 s) i wtedy ginie
+# także dziennik, więc wtyczka musi oddać wyniki wcześniej: po tym czasie nie
+# wysyłamy kolejnych zapytań do wyszukiwarki i przestajemy czekać na Workery,
+# zwracając to, co zdążyły pobrać. Gdy LC odpowiada bardzo wolno (strona
+# książki ma ok. 450 KB), limity gniazda (20–30 s) nie wystarczają – odpowiedź
+# „kapiąca” po kilka bajtów potrafi trwać kwadrans.
+IDENTIFY_MAX_SECONDS = 150
+
 import sys, os, io, time, re, threading, traceback
 
 try:
@@ -652,6 +661,8 @@ class LubimyCzytac(Source):
             log.info('BECKY INFO: dziennik diagnostyczny zapisywany do pliku: %s' % debug_path)
 
         log.info('--- START ---')
+        started = time.time()
+        deadline = started + IDENTIFY_MAX_SECONDS
         matches = []
         lubimy_czytac_id = identifiers.get(self.ID_NAME, None)
         log.info('\nTitle: %s\nAuthors: %s\n'%(title, authors))
@@ -728,7 +739,7 @@ class LubimyCzytac(Source):
                 if swapnames:
                     log.info('BECKY INFO: autorzy do porownan (po zamianie Nazwisko Imie): %s' % authors_lc)
 
-            matches = self._search(log, br, title, authors, authors_lc, timeout, abort)
+            matches = self._search(log, br, title, authors, authors_lc, timeout, abort, deadline)
 
         if abort.is_set():
             return
@@ -778,6 +789,8 @@ class LubimyCzytac(Source):
             time.sleep(0.1)
 
         # Czekamy na zakończenie wątków, reagując na przerwanie przez użytkownika
+        # i na limit czasu (IDENTIFY_MAX_SECONDS): po jego przekroczeniu zwracamy
+        # wyniki zebrane do tej pory, a wątki (daemon) kończą się same z procesem
         while not abort.is_set():
             a_worker_is_alive = False
             for w in workers:
@@ -788,6 +801,12 @@ class LubimyCzytac(Source):
                     a_worker_is_alive = True
             if not a_worker_is_alive:
                 break
+            if time.time() > deadline:
+                still_running = [w.url for w in workers if w.is_alive()]
+                log.error('BECKY INFO: limit czasu %d s przekroczony - zwracam wyniki zebrane do tej pory; '
+                          'nadal pobierane: %s' % (IDENTIFY_MAX_SECONDS, ', '.join(still_running)))
+                break
+        log.info('BECKY INFO: identify trwalo %.1f s' % (time.time() - started))
 
         results = []
         while True:
@@ -947,7 +966,7 @@ class LubimyCzytac(Source):
             log.exception('Failed to parse LubimyCzytac.pl page for query')
             return None
 
-    def _search(self, log, br, title, authors, authors_lc, timeout, abort):
+    def _search(self, log, br, title, authors, authors_lc, timeout, abort, deadline=None):
         """
         Strategia wyszukiwania: wykonuje kolejne warianty zapytania
         (``_query_variants``) i kończy na pierwszym, który da wynik „mocny”,
@@ -966,12 +985,16 @@ class LubimyCzytac(Source):
 
         :param authors: autorzy w zapisie z calibre (do zapytania)
         :param authors_lc: autorzy w konwencji LC „Imię Nazwisko” (do porównań)
+        :param deadline: chwila (``time.time()``), po której nie wysyłamy kolejnych zapytań
         :return: lista adresów kandydatów (może być pusta)
         """
         variants = self._query_variants(title, authors)
         weak = []
         tried = set()
         for number, (label, variant_title, variant_authors) in enumerate(variants, 1):
+            if deadline is not None and time.time() > deadline:
+                log.error('BECKY INFO: limit czasu przekroczony - pomijam pozostale warianty zapytania (od %d/%d)' % (number, len(variants)))
+                break
             query = self.create_query(log, title=variant_title, authors=variant_authors)
             if not query:
                 log.info('BECKY -- proba %d/%d (%s): brak danych do zapytania, pomijam' % (number, len(variants), label))

@@ -95,6 +95,8 @@ calibre-debug -g
 LUBIMYCZYTAC_DEBUG=1 calibre-debug -g
 ```
 
+Jedno pobieranie metadanych ma limit 150 sekund: po jego przekroczeniu wtyczka nie wysyła kolejnych zapytań i zwraca to, co zdążyła pobrać, razem z dziennikiem (wpis `limit czasu ... przekroczony`). Calibre zabija proces pobierania po 300 sekundach i wtedy dziennik ginie – stąd limit wtyczki jest krótszy.
+
 Przy ustawionej zmiennej `LUBIMYCZYTAC_DEBUG=1` cały dziennik pobierania jest dodatkowo dopisywany do pliku `plugins/lubimyczytac-debug.log` w katalogu konfiguracji calibre (Preferencje → Różne → „Otwórz katalog konfiguracji calibre”). Przydaje się, gdy calibre przerwie zbyt długie pobieranie i nie pokaże dziennika; po przekroczeniu 5 MB plik jest zaczynany od nowa.
 
 Komunikaty logu są celowo pisane bez polskich znaków diakrytycznych, żeby czytały się tak samo w każdej konsoli i dało się je bez obaw wklejać do zgłoszeń.
