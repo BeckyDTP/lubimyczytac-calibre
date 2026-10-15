@@ -2,7 +2,7 @@
 
 Wtyczka źródła metadanych dla programu [Calibre](https://calibre-ebook.com/), pobierająca dane książek i okładki z serwisu [LubimyCzytać](https://lubimyczytac.pl/).
 
-**Aktualna wersja źródeł:** 2.4.0  
+**Aktualna wersja źródeł:** 2.4.3  
 **Minimalna wersja Calibre zadeklarowana w kodzie:** 3.48.0  
 **Język dokumentacji i zgłoszeń:** polski
 
