@@ -30,6 +30,7 @@ __copyright__ = '2014, Roman Cupisz <roman.cupisz+calibre@gmail.com>, 2015-2026 
 __docformat__ = 'restructuredtext en'
 
 from six import text_type as unicode
+from six import string_types
 
 import os
 import socket
@@ -37,6 +38,7 @@ import time
 import re
 import datetime
 import json
+import numbers
 from threading import Thread
 
 from lxml.html import fromstring
@@ -476,6 +478,7 @@ class Worker(Thread):
            kluczowe, ocena, liczba ocen, daty pierwszych wydań, ID), a na
            początku o informacje o innych wydaniach;
         5. zapis ISBN i adresu okładki do pamięci podręcznej wtyczki,
+           kontrola typów pól (``ensure_metadata_types``),
            ``clean_downloaded_metadata`` i wstawienie wyniku do kolejki.
 
         Każdy dołączany akapit ma własny atrybut ``id`` (np. ``<p id="strony">``),
@@ -568,8 +571,10 @@ class Worker(Thread):
             series = series_index = None
         if series:
             mi.series = series
-        if series and series_index:
-            mi.series_index = series_index
+            # ``None`` = LC nie podaje numeru tomu; 0 („tom 0”, prequele) jest
+            # prawidłowym numerem i musi trafić do calibre
+            if series_index is not None:
+                mi.series_index = series_index
 
 
 
@@ -780,6 +785,7 @@ class Worker(Thread):
             if self.cover_url:
                 self.plugin.cache_identifier_to_cover_url(self.lubimy_czytac_id, self.cover_url)
 
+        self.ensure_metadata_types(mi)
         self.clean_downloaded_metadata(mi)
         self.log_parse_diagnostics()
         self.result_queue.put(mi)
@@ -1117,49 +1123,39 @@ class Worker(Thread):
         Cykl (odsyłacz ``/cykl/``) i numer tomu – trafiają do pól „Seria”
         i „Numer w serii” w calibre.
 
-        LC zapisuje cykl jako „Nazwa cyklu (tom N)”. Numer tomu może być
-        ułamkiem (np. 2.5) albo zakresem dla pakietów (np. „1-3” – bierzemy
-        pierwszą liczbę). Gdy numeru nie da się odczytać, zwracamy 0.
-        Zwraca krotkę ``(nazwa, numer)`` albo ``(None, None)``.
+        LC zapisuje cykl jako „Nazwa cyklu (tom N)”; numer bywa ułamkiem
+        (np. 2.5), zakresem dla pakietów (np. „1-3” – bierzemy pierwszą
+        liczbę) albo nie ma go wcale – tak LC opisuje książki poboczne cyklu,
+        np. „Grim i Oro. Starcie dwóch koron” w cyklu „Lightlark”. Rozbiór
+        tekstu robi ``split_series_volume``. Gdy książka należy do kilku
+        cykli, bierzemy pierwszy (tak jak dotąd) i odnotowujemy pozostałe
+        w logu.
+
+        Nazwa jest ZAWSZE napisem – do 2.4.3 przy cyklu bez numeru tomu
+        zwracana była lista jednoelementowa, a calibre przy zapisie wyniku do
+        OPF kończyło pobieranie błędem ``TypeError: Argument must be bytes or
+        unicode, got 'list'``. Numer to liczba albo ``None``, gdy LC go nie
+        podaje lub nie da się go odczytać (do 2.4.3: 0, przez co prawdziwy
+        „tom 0” przepadał). Zwraca krotkę ``(nazwa, numer)`` albo
+        ``(None, None)``.
         """
         try:
-            series_node = root.xpath('//section[@class="container book"]//span/a[contains(@href,"/cykl/")]')
-            if series_node:
-                series_lst = root.xpath('//section[@class="container book"]//span/a[contains(@href,"/cykl/")]/text()')
-                if series_lst:
-                    series_txt = series_lst
-                else:
-                    series_txt = None
-            else:
+            series_lst = root.xpath('//section[@class="container book"]//span/a[contains(@href,"/cykl/")]/text()')
+            series_lst = [' '.join(unicode(txt).split()) for txt in series_lst]
+            series_lst = [txt for txt in series_lst if txt]
+            if not series_lst:
                 return (None, None)
-
-            ser_info = None
-            if series_txt:
-                ser_string = [series_txt[0].replace('\n','').strip()]
-                ser_nazwa = ser_string
-                for ser in ser_string:
-                    if 'tom ' in ser:
-                        ser_info = ser.split(' (tom ', 1)
-                        ser_nazwa = ser.split(' (tom ')[0]
-                        break
-            if ser_info:
-                series_index_unicode = ser_info[1]
-                series_index_string = str(series_index_unicode.replace(" ", "").replace(")", ""))
-                # Pakiet/komplet tomów, np. „1-3” – bierzemy pierwszy numer
-                if "-" in series_index_string:
-                    series_index_string_temp = series_index_string.split('-', 1)
-                    series_index_string = series_index_string_temp[0]
-                if series_index_string.replace(".", "").isdigit() is True:
-                    series_index = get_int_or_float(series_index_string)
-                else:
-                    series_index = 0
-            else:
-                series_index = 0
-            series = ser_nazwa
-            self.log.info('BECKY INFO: Found series (znaleziono cykl): (%s, %s)' % (strip_accents(unicode(series)), series_index))
+            if len(series_lst) > 1:
+                self.log.info('BECKY INFO: ksiazka nalezy do %d cykli (%s) - biore pierwszy'
+                              % (len(series_lst), strip_accents(' | '.join(series_lst))))
+            series, series_index = split_series_volume(series_lst[0])
+            if series_index is None:
+                self.log.info('BECKY INFO: cykl bez numeru tomu - numer w serii pozostaje bez zmian')
+            self.log.info('BECKY INFO: Found series (znaleziono cykl): (%s, %s)' % (strip_accents(series), series_index))
             self.record_parse_attempt('series', 'HTML cykl', (series, series_index))
             return (series, series_index)
         except:
+            self.log.exception('Error parsing series (cykl) for url: %r' % self.url)
             return (None, None)
 
     def parse_rating(self, root):
@@ -1705,11 +1701,97 @@ class Worker(Thread):
         if replaceISBN == 1:
             mi.isbn = check_isbn(mi.isbn)
 
+    # Pola Metadata, których typ sprawdza ensure_metadata_types: tekstowe,
+    # listowe i liczbowe. Calibre zapisuje wynik identify() do OPF, więc każdy
+    # napis musi być napisem – jedna lista w polu tekstowym unieważnia całe
+    # pobranie („Nieudane pobieranie metadanych”), choć reszta danych jest dobra
+    TEXT_FIELDS = ('title', 'series', 'publisher', 'comments', 'author_sort', 'title_sort')
+    LIST_FIELDS = ('authors', 'tags', 'languages')
+    NUMBER_FIELDS = ('series_index', 'rating')
+
+    def ensure_metadata_types(self, mi):
+        """
+        Ostatnia linia obrony przed błędem typu w jednym polu wyniku.
+
+        Pola tekstowe: lista lub krotka → elementy sklejone (przecinkiem, opis
+        bez separatora), inny typ → napis. Pola listowe: napis → lista
+        jednoelementowa, krotka → lista. Pola liczbowe: wartość nieliczbowa →
+        liczba z napisu albo ``None``. Identyfikatory: wartości zawsze napisem.
+        Każda naprawa jest odnotowana w logu jako ``BECKY WARN`` – to sygnał,
+        że któryś parser oddał zły typ i trzeba go poprawić (tak było z cyklem
+        bez numeru tomu do 2.4.3); strażnik ma tylko ocalić pobranie.
+        """
+        for field in self.TEXT_FIELDS:
+            value = getattr(mi, field, None)
+            if value is None or isinstance(value, string_types):
+                continue
+            if isinstance(value, (list, tuple, set)):
+                separator = '' if field == 'comments' else ', '
+                fixed = separator.join(unicode(x) for x in value if x is not None)
+            else:
+                fixed = unicode(value)
+            self.log.warn('BECKY WARN: pole %s mialo typ %s zamiast napisu - naprawiono na: %s'
+                          % (field, type(value).__name__, strip_accents(fixed)))
+            setattr(mi, field, fixed)
+        for field in self.LIST_FIELDS:
+            value = getattr(mi, field, None)
+            if isinstance(value, string_types):
+                self.log.warn('BECKY WARN: pole %s bylo napisem zamiast listy - naprawiono' % field)
+                setattr(mi, field, [value])
+            elif isinstance(value, (tuple, set)):
+                setattr(mi, field, list(value))
+        for field in self.NUMBER_FIELDS:
+            value = getattr(mi, field, None)
+            if value is None or (isinstance(value, numbers.Real) and not isinstance(value, bool)):
+                continue
+            try:
+                fixed = float(unicode(value).replace(',', '.'))
+            except (TypeError, ValueError):
+                fixed = None
+            self.log.warn('BECKY WARN: pole %s mialo typ %s zamiast liczby - naprawiono na: %s'
+                          % (field, type(value).__name__, fixed))
+            setattr(mi, field, fixed)
+        identifiers = getattr(mi, 'identifiers', None)
+        if isinstance(identifiers, dict):
+            for key, value in list(identifiers.items()):
+                if value is not None and not isinstance(value, string_types):
+                    self.log.warn('BECKY WARN: identyfikator %s mial typ %s zamiast napisu - naprawiono' % (key, type(value).__name__))
+                    identifiers[key] = unicode(value)
+
 def get_int_or_float(v):
     """Zamienia napis na ``int``, gdy liczba jest całkowita (``'2.0'`` → 2), w przeciwnym razie na ``float`` (``'2.5'`` → 2.5)."""
     number_as_float = float(v)
     number_as_int = int(number_as_float)
     return number_as_int if number_as_float == number_as_int else number_as_float
+
+
+# „Nazwa cyklu (tom N)” – nazwa leniwie do pierwszego „(tom”, numer to wszystko
+# do zamykającego nawiasu; wielkość liter i białe znaki bez znaczenia
+SERIES_VOLUME_RE = re.compile(r'^(?P<name>.*?)\s*\(\s*tom\s+(?P<volume>[^)]*)\)', re.IGNORECASE | re.UNICODE)
+
+
+def split_series_volume(text):
+    """
+    Rozdziela tekst cyklu z LC na nazwę i numer tomu.
+
+    ``'Lightlark (tom 3)'`` → ``('Lightlark', 3)``; ``'Cykl (tom 2.5)'`` →
+    ``('Cykl', 2.5)`` (także z przecinkiem: „2,5”); ``'Cykl (tom 1-3)'`` →
+    ``('Cykl', 1)`` (pakiet – pierwszy numer); ``'Cykl (tom 0)'`` →
+    ``('Cykl', 0)``; ``'Lightlark'`` → ``('Lightlark', None)`` (cykl bez
+    numeru); numer nieczytelny, np. „tom I” → ``None``. Nazwa jest zawsze
+    napisem z pojedynczymi spacjami (znaki nowej linii i twarde spacje z HTML
+    są sklejane).
+    """
+    text = ' '.join(unicode(text).split())
+    match = SERIES_VOLUME_RE.match(text)
+    if match is None:
+        return (text, None)
+    name = match.group('name').strip() or text
+    volume = match.group('volume').replace(' ', '').replace(',', '.')
+    volume = volume.split('-', 1)[0]
+    if re.match(r'^\d+(\.\d+)?$', volume):
+        return (name, get_int_or_float(volume))
+    return (name, None)
 
 def odmiana(x, y):
     """

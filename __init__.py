@@ -31,7 +31,7 @@ __docformat__ = 'restructuredtext en'
 
 # Numer wersji wtyczki (krotka wymagana przez calibre). Zmieniamy go tylko tutaj –
 # tekstowa postać (PLUGIN_VERSION w klasie LubimyCzytac) jest wyliczana z tej krotki.
-PLUGINVER = (2, 4, 3)
+PLUGINVER = (2, 4, 4)
 
 # Limit czasu całego identify() w sekundach. Calibre kończy proces roboczy
 # pobierania metadanych po własnym limicie (domyślnie 300 s) i wtedy ginie

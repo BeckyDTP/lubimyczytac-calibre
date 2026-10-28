@@ -10,6 +10,7 @@ tests/
   test_hint.py      podpowiedź ręcznego wyszukania: wirtualny wynik tylko w oknie pobierania; log do pliku
   test_editions.py  inne wydania: lista pobierana raz i tylko gdy potrzebna; skan ISBN z limitami
   test_deadline.py  limit czasu identify(): bez nowych zapytań po limicie, bez czekania na wiszące Workery
+  test_series.py    cykl: nazwa zawsze napisem, numer tomu liczbą albo None (tom 0 zostaje); strażnik typów Metadata
   recorded.json     81 zapytań do LC z 2026-10-14: {adres: [[tytuł, [autorzy], href], ...]}
   harness/stubs/    atrapy calibre, polyglot, mechanize, qt – tylko to, czego używa wtyczka
 ```
@@ -22,6 +23,7 @@ python3 rare_cases.py queries             # adresy zapytań, które wysłałaby 
 python3 test_hint.py                      # identify() z pustą stroną LC: kiedy pojawia się podpowiedź
 python3 test_editions.py                  # Worker na atrapie LC liczącej żądania: wydania i skan ISBN
 python3 test_deadline.py                  # limit czasu identify()
+python3 test_series.py                    # cykl bez numeru tomu, tom 0, ensure_metadata_types
 ```
 
 Kod wtyczki jest ładowany wprost z katalogu nadrzędnego; inny katalog wskazuje zmienna

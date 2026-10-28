@@ -2,6 +2,14 @@
 
 Wpisy są po angielsku, bo te same notatki publikujemy w wątku wtyczki na forum MobileRead. Najnowsza wersja na górze.
 
+## Wersja 2.4.4 – 27 Oct 2026
+*Wydanie przygotowane przez Becky.*
+- Fixed: Books whose LubimyCzytac cycle has no volume number (for example 'Grim i Oro. Starcie dwóch koron', listed in the 'Lightlark' cycle without a 'tom N') could not be downloaded at all: calibre reported 'Nieudane pobieranie metadanych' with `TypeError: Argument must be bytes or unicode, got 'list'`. The cycle name was handed to calibre as a one-element list; it is now always a string, and a missing volume number leaves the series index untouched instead of forcing a value. Reported on MobileRead.
+- Fixed: Volume 0 ('tom 0', prequels) is now written to the series index; previously it was dropped as an empty value.
+- Changed: The cycle text is parsed with a single pattern ('Name (tom N)', case-insensitive, any whitespace including non-breaking spaces); fractions ('2.5' or '2,5') and ranges ('1-3' → 1) are handled as before. When a book belongs to several cycles the first one is used, as before, and the others are written to the log.
+- Added: A type guard on the finished result (`ensure_metadata_types`): a list in a text field, a string in a list field or a non-numeric series index/rating is corrected before the result reaches calibre and reported in the log as 'BECKY WARN', so one malformed field can no longer sink a whole download.
+- Added: Tests for the cycle parser and the type guard (tests/test_series.py).
+
 ## Wersja 2.4.3 – 16 Oct 2026
 *Wydanie przygotowane przez Becky.*
 - Fixed: An explicitly supplied lubimyczytac identifier (typed in, pasted with the clipboard button or set by the 'Zmień wydanie LC' helper plugin) now takes precedence over 'Prefer matching ISBN'. Previously a stale ISBN left in calibre made the ISBN check switch the result back to the old edition, undoing the user's choice.

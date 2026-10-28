@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lubimyczytac plugin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-15 20:08+0200\n"
-"PO-Revision-Date: 2026-10-15 20:09+0200\n"
+"POT-Creation-Date: 2026-10-15 21:49+0200\n"
+"PO-Revision-Date: 2026-10-15 21:50+0200\n"
 "Last-Translator: Becky <becky@fr.pl>\n"
 "Language-Team: \n"
 "Language: pl\n"
@@ -23,7 +23,7 @@ msgstr ""
 "X-Poedit-SearchPath-1: worker.py\n"
 "X-Poedit-SearchPath-2: __init__.py\n"
 
-#: __init__.py:116 __init__.py:490 __init__.py:899
+#: __init__.py:116 __init__.py:490 __init__.py:905
 msgid "Unknown"
 msgstr "Nieznany"
 
@@ -47,15 +47,15 @@ msgstr ""
 "Błędy proszę zgłaszać przez forum <a href=\"https://www.mobileread.com/"
 "forums/showthread.php?t=282922\">MobileRead</a>."
 
-#: __init__.py:873
+#: __init__.py:877
 msgid "WARNING: The LubimyCzytac plugin did not find this book."
 msgstr "UWAGA: Wtyczka LubimyCzytać nie znalazła tej książki."
 
-#: __init__.py:874
+#: __init__.py:878
 msgid "This entry is not book metadata - do not apply it."
 msgstr "To nie są metadane książki – nie zatwierdzaj tego wyniku."
 
-#: __init__.py:875
+#: __init__.py:879
 msgid ""
 "The LubimyCzytac search engine knows only the main edition of each book. An "
 "edition published under a different title can usually be found with a web "
@@ -65,28 +65,31 @@ msgstr ""
 "opublikowane pod innym tytułem zwykle da się znaleźć wyszukiwarką "
 "internetową:"
 
-#: __init__.py:879
+#: __init__.py:883
 msgid "Search Google (lubimyczytac.pl only)"
 msgstr "Szukaj w Google (tylko lubimyczytac.pl)"
 
-#: __init__.py:881
+#: __init__.py:885
 msgid "Search DuckDuckGo (lubimyczytac.pl only)"
 msgstr "Szukaj w DuckDuckGo (tylko lubimyczytac.pl)"
 
-#: __init__.py:883
+#: __init__.py:887
 msgid "Search on LubimyCzytac"
 msgstr "Szukaj w wyszukiwarce LubimyCzytać"
 
-#: __init__.py:885
+#: __init__.py:889
 msgid ""
-"When you find the page of your edition, copy the number from its address "
-"(for example 74063 from lubimyczytac.pl/ksiazka/74063/krol-pozwow), enter "
-"lubimyczytac:74063 in the identifiers field of the book and download the "
-"metadata again."
+"When you find the page of your edition, copy its address from the browser "
+"(for example https://lubimyczytac.pl/ksiazka/74063/krol-pozwow) and, in the "
+"Edit metadata window, click the clipboard button next to the Identifiers "
+"field: calibre turns the address into lubimyczytac:74063 (you can also type "
+"it by hand). Then download the metadata again."
 msgstr ""
-"Gdy znajdziesz stronę swojego wydania, skopiuj liczbę z jej adresu (np. "
-"74063 z lubimyczytac.pl/ksiazka/74063/krol-pozwow), wpisz lubimyczytac:74063 "
-"w polu identyfikatorów książki i pobierz metadane ponownie."
+"Gdy znajdziesz stronę swojego wydania, skopiuj jej adres z przeglądarki (np. "
+"https://lubimyczytac.pl/ksiazka/74063/krol-pozwow) i w oknie edycji "
+"metadanych kliknij przycisk ze schowkiem obok pola „Identyfikatory”: calibre "
+"zamieni adres na lubimyczytac:74063 (można go też wpisać ręcznie). Potem "
+"pobierz metadane ponownie."
 
 #: config.py:138
 msgid "Other options"
@@ -371,6 +374,17 @@ msgstr "ID"
 #: config.py:295
 msgid "Append ID at the end of the comment."
 msgstr "Dołącz na końcu komentarza ID z serwisu LubimyCzytac."
+
+#~ msgid ""
+#~ "When you find the page of your edition, copy the number from its address "
+#~ "(for example 74063 from lubimyczytac.pl/ksiazka/74063/krol-pozwow), enter "
+#~ "lubimyczytac:74063 in the identifiers field of the book and download the "
+#~ "metadata again."
+#~ msgstr ""
+#~ "Gdy znajdziesz stronę swojego wydania, skopiuj liczbę z jej adresu (np. "
+#~ "74063 z lubimyczytac.pl/ksiazka/74063/krol-pozwow), wpisz "
+#~ "lubimyczytac:74063 w polu identyfikatorów książki i pobierz metadane "
+#~ "ponownie."
 
 #~ msgid "Current edition:"
 #~ msgstr "Aktualne wydanie:"
